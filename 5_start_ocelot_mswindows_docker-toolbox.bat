@@ -19,13 +19,18 @@ echo. & ^
 echo.   To learn more about Docker, visit: https://docs.docker.com/ & ^
 echo. & ^
 echo.   Once the application is ready, it will open your default browser & ^
-echo.   to http://localhost:5000/ which is the link to Ocelot. & ^
+echo.   and load the Ocelot home page. & ^
 echo. & ^
 echo ********************************************************************* & ^
 echo. & ^
 echo.   Press any key to skip this step. Waiting so you have time to read message above. & ^
 echo. 
 timeout 60
+echo. & ^
+echo. & ^
+echo.   Ensure docker daemon is running (for those using Docker Toolbox) & ^
+echo.
+docker-machine start default
 echo. & ^
 echo.   Running Docker build. & ^
 echo.
@@ -39,9 +44,17 @@ echo.   Starting Ocelot. & ^
 echo.
 docker-compose up -d --remove-orphans
 echo. & ^
+echo.
+for /F "tokens=* USEBACKQ" %%F in (`docker-machine ip`) do (
+set ip=%%F
+)
+echo.
+echo.   start /max http://%ip%:5000/ & ^
+echo.
 echo.   Let's give the web server a few seconds to get going before trying to load Ocelot home page. & ^
 echo.   Press any key to skip this step. & ^
 echo.   If page doesn't load right away once open in browser, simply press F5 to refresh page.
 timeout 10
-start /max http://localhost:5000/
+echo.
+start /max http://%ip%:5000/
 stop
