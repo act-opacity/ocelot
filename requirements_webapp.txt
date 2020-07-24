@@ -1,0 +1,5 @@
+flask
+gunicorn
+python-dotenv
+Flask-SQLAlchemy
+celery[redis]

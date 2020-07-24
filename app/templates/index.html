@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ocelot, an Opacity client</title>
+    <meta name="description" content="Locally run server to enable interface to Opacity Storage">
+    <meta name="author" content="act-opacity">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dataTables.bootstrap4.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='select.dataTables.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+  </head>
+  <body>
+    <!-- BEGIN--primary body wrapper -->  
+    <div class="container-fluid">
+        <!-- BEGIN--main menu -->
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Opacity Storage</a>
+                    </li>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-916910" href="#loadAccountModal" class="nav-link" data-toggle="modal">Load Account</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="loadAccountModal" tabindex="-1" role="dialog" aria-labelledby="loadAccountLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title spinner" id="loadAccountLabel">Add New or Load Saved Account</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                        <form id="addNewAccount">
+                                            <h6>Add New Account (Opacity Handle)</h6>
+                                            <div class="form-group row">
+                                                <div class="col-md-8 mt-2 mb-2">
+                                                    <input type="text" class="form-control" id="handle_name" placeholder="User Supplied Name to Associate with Opacity Handle" required>
+                                                    <div class="invalid-feedback">
+                                                        Please provide a name
+                                                    </div>
+                                                    <input type="password" class="form-control" id="handle" placeholder="Opacity Handle" required>
+                                                    <div id="invalid_handle_error" class="invalid-feedback">
+                                                        Please provide valid 128 character handle
+                                                    </div>
+                                                    <small class="form-text text-muted">
+                                                        Save account for easy access later. Your account details are stored on your machine.
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4 mt-2 mb-2">
+                                                    <button id="saveAccountBtn" class="btn btn-sm btn-primary spinner my-1 mx-1" onclick="return c_addNewAccount();">Save Account</button>
+                                                    <button type="button" class="btn btn-sm btn-secondary my-1 mx-1" onclick="c_clearFormFields('addNewAccount');">Reset</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <form>
+                                            <h6>Load a Saved Account</h6>
+                                            <div class="form-group row">
+                                                <div class="col-md-8 mt-2 mb-2">
+                                                    <select class="form-control" id="loadAccount">
+                                                    </select>
+                                                    <small class="form-text text-muted">
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4 mt-2 mb-2">
+                                                    <button id="loadAccountBtn" class="btn btn-sm btn-primary my-1 mx-1" onclick="return c_loadAccountTableData(false);">
+                                                        Load Saved
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <form>
+                                            <h6>Remove a Saved Account</h6>
+                                            <div class="form-group row">
+                                                <div class="col-md-8 mt-2 mb-2">
+                                                    <select class="form-control spinner" id="removeAccount">
+                                                        <option selected="selected"></option>
+                                                    </select>
+                                                    <small class="form-text text-muted">
+                                                        Will ask for confirmation before taking action.
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4 mt-2 mb-2">
+                                                    <a id="removeAccountBtn" href="#removeAccountConfirmModal" data-toggle="modal" data-dismiss="modal" class="btn btn-sm btn-danger my-1 mx-1">Remove Account</a>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-196417" href="#modal-container-196417" class="nav-link" data-toggle="modal">OpacityDrive</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="modal-container-196417" tabindex="-1" role="dialog" aria-labelledby="opacityDriveLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">OpacityDrive: Access and Manage Your Local Files</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                        <form>
+                                            <h6>Access Your Local OpacityDrive from a File Explorer</h6>
+                                            <div class="form-group row">
+                                                <div class="col-md-2 mt-2 mb-2">
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="return c_setClipboard('#opacityFileExplorerPath');">Copy Path</button>
+                                                </div>
+                                                <div class="col-md-10 mt-2 mb-2">
+                                                    <p id="opacityFileExplorerPath">{{config['FILE_EXPLORER_OPACITYDRIVE_PATH']}}</p>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <form>
+                                            <h6>Access Your Local OpacityDrive via your Browser</h6>
+                                            <div class="form-group row">
+                                                <div class="col-md-2 mt-2 mb-2">
+                                                    <button type="button" class="btn btn-sm btn-primary" onclick="return c_setClipboard('#opacityFileProtocolPath');">Copy Path</button>
+                                                </div>
+                                                <div class="col-md-10 mt-2 mb-2">
+                                                    <p id="opacityFileProtocolPath">{{config['FILE_PROTOCOL_OPACITYDRIVE_PATH']}}</p>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <form>
+                                            <h6>OpacityDrive Explorer Path for Saved Accounts</h6>
+                                            <!-- add content with c_loadAccountsToSelect() -->
+                                            <div id="accountPathDetail">
+                                            </div>
+                                        </form>
+                                    </div> 
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-679342" href="#modal-container-679342" class="nav-link" data-toggle="modal">Job Queue</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="modal-container-679342" tabindex="-1" role="dialog" aria-labelledby="jobQueueLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="jobQueueLabel">View and Manage Running Jobs</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                    <p><a target="_blank" rel="noopener noreferrer" href="localhost:5555">View Job Queue</a></p>
+                                    <p>
+                                        All file and folder actions are run in the background using a task queue manager.
+                                        These jobs continue to run even after you close your browser, enabling you
+                                        to queue up long-running jobs (e.g. upload or download hundreds of files) and forget about it.
+                                        To view the progress of any job, use the Job Queue link above.
+                                    </p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-173544" href="#modal-container-173544" class="nav-link" data-toggle="modal">Help</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="modal-container-173544" tabindex="-1" role="dialog" aria-labelledby="HelpLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title" id="HelpLabel">How to Use Ocelot</h4>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                        <div id="card-119252">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-935386">Load an Account</a>
+                                                </div>
+                                                <div id="card-element-935386" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>Get started by first loading an Opacity Storage account using the <b>Load Account</b> menu item. 
+                                                            Use the "Add New Account" form fields to enter a name you choose and your account handle.
+                                                        </p>
+                                                        <p>If you are new to Opacity Storage, you can review Opacity plans and acquire an account
+                                                            here: <a target="_blank" href="https://www.opacity.io/sign-up">https://www.opacity.io/sign-up</a>
+                                                        </p>
+                                                        <p>
+                                                            When you first save an Opacity account within Ocelot, three things happen:
+                                                        </p>
+                                                            <ol>
+                                                                <li>
+                                                                    Your account details are saved permanently to a local database you own.
+                                                                    Note that you can save and manage multiple accounts.
+                                                                </li>
+                                                                <li>
+                                                                    An <b>OpacityDrive</b> folder corresponding to your account 
+                                                                    handle is created on your local machine.
+                                                                </li>
+                                                                <li>
+                                                                    A full, initial index of your Opacity account's files and folders 
+                                                                    is performed to enable you to view them in the main data table and act upon them. 
+                                                                    To re-index these files and folders at any time, select the red "Refresh Data" button. 
+                                                                </li>
+                                                            </ol> 
+                                                        </p>
+                                                        <p>After saving a new account, load it at any time using the <b>Load Account</b> menu item 
+                                                            and selecting from the "Load a Saved Account" pick list.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="collapsed card-link" data-toggle="collapse" data-parent="#card-119252" href="#card-element-869403">Add Files and Folders to OpacityDrive</a>
+                                                </div>
+                                                <div id="card-element-869403" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>OpacityDrive is your local sync folder for your Opacity storage accounts. 
+                                                            It is created when you first run Ocelot.
+                                                        </p>
+                                                        <p>Within OpacityDrive is a separate 
+                                                           folder corresponding to each Opacity account you have saved.
+                                                        </p>
+                                                        <p>To access OpacityDrive, select the <b>OpacityDrive</b> menu item. 
+                                                            From there, you will see an option to "Copy Path" for the following:
+                                                            <ol>
+                                                                <li>
+                                                                    An operating system (OS) specific address path to your OpacityDrive folder that 
+                                                                    you can copy and paste into a file explorer.
+                                                                </li>
+                                                                <li>
+                                                                    A link to your OpacityDrive folder that you can copy and paste 
+                                                                    directly into another browser tab in order to view 
+                                                                    and navigate the contents of your file system.
+                                                                </li>
+                                                                <li>
+                                                                    An address path to each Opacity account you have saved that you can copy and paste
+                                                                    into a file explorer. The folder name within OpacityDrive corresponds to 
+                                                                    your actual account handle but only uses the first 20 HEX characters of it.
+                                                                    <ul>
+                                                                        <li>
+                                                                            e.g. on Windows, C:\Users\your-user-name\OpacityDrive\f2ac378b9d016e5c931a
+                                                                        </li>
+                                                                        <li>
+                                                                            <b>NOTE:</b> You will want to copy this path in order to add new 
+                                                                            files and folders to OpacityDrive and to retrieve your downloaded files.
+                                                                        </li>
+                                                                    </ul>
+                                                                </li>
+                                                            </ol>
+                                                        </p>
+                                                        <p>Now that you have copied your account folder path to the clipboard, paste the path into a 
+                                                            file explorer (e.g. Windows Explorer if running Windows) to open your OpacityDrive account folder.
+                                                        </p>
+                                                        <p>Copy or move any number of files and folders from your computer to this folder. 
+                                                            Once you have done that, you need to "refresh" your data (see next section).  
+                                                            Then you're ready to sync/upload your files to Opacity storage.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-437988">Refresh Data (Index Your Files and Folders)</a>
+                                                </div>
+                                                <div id="card-element-437988" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            Ocelot assumes nothing about what files and folders exist in your Opacity account. 
+                                                            There are many benefits to taking this approach (e.g. many devices syncing, sharing). 
+                                                        </p>
+                                                        <p>
+                                                            But to enjoy this benefit, there is a cost. You need to re-index (refresh) your data regularly to see 
+                                                            recent changes, such as the creation, movement, renaming or deletion of both files and folders, 
+                                                            whether local or remote.
+                                                        </p>
+                                                        <p>
+                                                            Any time you perform a file or folder action and want to see the results in Ocelot, 
+                                                            refresh your data by selecting the red "Refresh Data" button above the data table.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-167832">Upload or Download (Sync) Your Files</a>
+                                                </div>
+                                                <div id="card-element-167832" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            After refreshing the data from the previous step, your newest data will display 
+                                                            in the Ocelot data table. Now you're able to perform actions on both your local (OpacityDrive)
+                                                            and remote (Opacity storage) files and folders.
+                                                        </p>
+                                                        <p>
+                                                            If this is your first time uploading or downloading your files and you want to sync 
+                                                            all your files and folders, follow these steps:
+                                                            <ol>
+                                                                <li>
+                                                                    Select the "Sync Status Filter" pick list to find all non-synced 
+                                                                    files, whether that is local-only or Opacity-only files.
+                                                                </li>
+                                                                <li>
+                                                                    After applying the filter, select the "Select All" button to select and highlight 
+                                                                    all the filtered rows.
+                                                                </li>
+                                                                <li>
+                                                                    Select the "File Actions" button.
+                                                                </li>
+                                                                <li>
+                                                                    Your selected files will display in a new table for you to review. If it's what 
+                                                                    you expected, select an action you want to perform from the "Select File Action" 
+                                                                    pick list.
+                                                                    <ul>
+                                                                        <li>To upload files, select "Upload/Sync to Opacity".</li>
+                                                                        <li>To download files, select "Download/Sync to local storage".</li>
+                                                                    </ul>
+                                                                </li>
+                                                                <li>Select the confirmation button labeled "Yes, do it!" once you're ready.</li>
+                                                                <li>An alert dialog will display letting you know your requested action has been queued. 
+                                                                    Close the dialog and file action window/modal to return to the main data table. 
+                                                                    Use the escape (Esc) key to exit quickly any dialog or window.
+                                                                </li>
+                                                            </ol>
+                                                        </p>
+                                                        <h6>Additional details</h6>
+                                                        <p>
+                                                            No pick list is provided to select a destination folder when uploading or downloading. 
+                                                            If the folder structure required by the file doesn't exist, it will be created automatically.
+                                                        </p>
+                                                        <p>
+                                                            To monitor the status of your file and folder actions, view the <b>Job Queue</b> (see section below). 
+                                                            It's recommended to wait to refresh your data until after your queued jobs are complete.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-884317">File Actions</a>
+                                                </div>
+                                                <div id="card-element-884317" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            All file actions take place using the "File Actions" button. These file actions are
+                                                            only available for the files you've selected from the data table.
+                                                        </p>
+                                                        <p>
+                                                            In a prior section above, we learned how to upload and download files. Here is a complete 
+                                                            list of file actions you can perform:
+                                                            <ul>
+                                                                <li>
+                                                                    Download/Sync to OpacityDrive (local storage)
+                                                                </li>
+                                                                <li>
+                                                                    Upload/Sync to Opacity (remote storage)
+                                                                </li>
+                                                                <li>
+                                                                    Delete one or more files
+                                                                </li>
+                                                                <li>
+                                                                    Relocate (move) files to a different folder
+                                                                </li>
+                                                                <ul>
+                                                                    <li>
+                                                                        If folder doesn't exist where you want 
+                                                                        to move the file(s), you'll first need to create it.
+                                                                    </li>
+                                                                </ul>
+                                                                <li>
+                                                                    Rename a file
+                                                                </li>
+                                                            </ul>
+                                                        </p>
+                                                        <h6>Additional details</h6>
+                                                        <p>
+                                                            For Delete, Move and Rename file actions, the action will be performed on both 
+                                                            local and remote files, if the file exists in both places.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-731446">Folder Actions</a>
+                                                </div>
+                                                <div id="card-element-731446" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            In addition to file actions, you can perform folder actions required to manage your files 
+                                                            using the "Folder Actions" button. Specifically, the following actions are available:
+                                                        </p>
+                                                        <p>
+                                                            <ul>
+                                                                <li>Create a New Folder</li>
+                                                                <li>Rename a folder</li>
+                                                                <li>Delete a folder and all contents</li>
+                                                                <li>Move a folder and all contents</li>
+                                                            </ul>
+                                                        </p>
+                                                        <h6>Additional details</h6>
+                                                        <p>
+                                                            All folder actions will be performed on both local and remote folders. 
+                                                            If a folder doesn't exist in one location, it will be created so that the action 
+                                                            (rename, delete, move) can be performed. The technical reason for this approach is that 
+                                                            it enables a simple presentation of combined local and remote folders in pick lists without 
+                                                            having to sync directory structures prior to a user action that requires it.
+                                                        </p>
+                                                        <p>
+                                                            <b>Warning!</b> Please read the warnings within the Folder Actions dialog, as they alert you 
+                                                            to potential negative or unintended consequences of your actions. Especially 
+                                                            when deleting, moving or renaming a folder, ensure you know what the result will be 
+                                                            prior to confirming the action.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-119252" href="#card-element-678123">View Status of File and Folder Actions (Job Queue)</a>
+                                                </div>
+                                                <div id="card-element-678123" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>Ocelot offloads all file and folder actions to a task queue that runs in the background. 
+                                                            Doing so enables you to perform bulk actions without having to wait or monitor the status 
+                                                            in real time. It also ensures actions are performed in the most reliable way possible to 
+                                                            prevent or minimize poor outcomes like failed uploads and missing or orphaned file and 
+                                                            folder metadata. Ocelot focuses on reliability over speed, although performance is still 
+                                                            seriously considered.
+                                                        </p>
+                                                        <p>
+                                                            If at any time you want to monitor the progress of file and folder actions, select the 
+                                                            "Job Queue" menu item and then select the "View Job Queue" link. Doing so will open a new 
+                                                            browser tab where you can see a real-time dashboard view of running jobs and their status. 
+                                                            The Dashboard view is the easiest way to monitor running jobs.
+                                                        </p>
+                                                        <p>
+                                                            Additionally, you can see the specifics of every running task by selecting the "Tasks" menu item. 
+                                                            The specifics you can review for each task include:
+                                                        </p>
+                                                            <ul>
+                                                                <li>Which queue the task is running in</li>
+                                                                <li>When the task was received, started and completed</li>
+                                                                <li>What the current status is (press F5 to refresh the Tasks page)</li>
+                                                                <li>What the name of the task is (file upload, file download, etc)</li>
+                                                                <li>What arguments were sent to the task (file name, handle, folder path, etc)</li>
+                                                                <li>How long the task has been running or took to complete</li>
+                                                                <li>What the result of the task was if any; usually simply a 'True' or 'False' result</li>
+                                                                <li>The output of any error if it is unhandled or purposely passed along</li>
+                                                            </ul>
+                                                        </p>
+                                                        <h6>Additional details</h6>
+                                                        <p>
+                                                            Tasks will continue to run even after the Ocelot home page or browser is closed. 
+                                                            If you want to stop the task queues from running, one option is to run the shutdown script 
+                                                            located in the Ocelot code repository you downloaded. The script will start with "stop_ocelot".
+                                                        </p>
+                                                        <p>
+                                                            Ocelot is configured to forget all tasks upon restart, but that is a configuration you can change 
+                                                            for your specific Ocelot instance if you have a different preference.
+                                                        </p>
+                                                        <p>
+                                                            It's best not to shut down the task queues while they are still processing tasks unless it is 
+                                                            an emergency. Doing so will certainly result in orphaned files if you were in the middle of 
+                                                            uploading files or making serious metadata changes to Opacity storage, such as moving a folder.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-297585" href="#modal-container-297585" class="nav-link" data-toggle="modal">About</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="modal-container-297585" tabindex="-1" role="dialog" aria-labelledby="supportDevelopmentLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                        <div class="modal-header">
+                                        <h5 class="modal-title" id="supportDevelopmentLabel">About Ocelot and Opacity Storage</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                        <div id="card-556731">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-556731" href="#card-element-156332">Overview and Features</a>
+                                                </div>
+                                                <div id="card-element-156332" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            Ocelot is a containerized web application that interfaces with the <a target="_blank" href="https://www.opacity.io/">Opacity Storage</a> web services.
+                                                             Ocelot is client software meant to be run on your local machine.
+                                                        </p>
+                                                        <p>
+                                                            Since Ocelot uses Docker to run, it can be run on any device 
+                                                             that supports Docker, including Windows, Macintosh (Mac) and Linux.
+                                                        </p>
+                                                        <p>
+                                                            <b>Ocelot featured capabilities:</b>
+                                                            <ul>
+                                                                <li>Store and manage multiple Opacity accounts</li>
+                                                                <li>Reliably sync your files (upload, download) and folders both directions between Opacity and one or more of your devices</li>
+                                                                <li>Provide a sync status per file to know where it resides (Opacity, local machine, both)</li>
+                                                                <li>Enable you to search and filter your files easily in one big table</li>
+                                                                <li>Allow you to perform file and folder management activities (create, delete, rename, move)</li>
+                                                                <li>Review file version history and access previous file versions</li>
+                                                                <li>Quickly open a file's share link to share or review its contents</li>
+                                                            </ul>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-556731" href="#card-element-743586">Ocelot Version</a>
+                                                </div>
+                                                <div id="card-element-743586" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            <b>Installed Version:</b> Ocelot v{{config['OCELOT_VERSION']}}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-556731" href="#card-element-945374">GitHub Repo Links</a>
+                                                </div>
+                                                <div id="card-element-945374" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            <b>Source code (GitHub repo):</b> <a target="_blank" href="https://github.com/act-opacity/ocelot">https://github.com/act-opacity/ocelot</a>
+                                                        </p>
+                                                        <p>
+                                                            <b>Direct download link:</b> <a target="_blank" href="https://github.com/act-opacity/ocelot/archive/master.zip">https://github.com/act-opacity/ocelot/archive/master.zip</a><br/>
+                                                            This link will download a compressed version (.zip) of the Ocelot Github repo. The repo contents can 
+                                                            be used directly to build and run the application using Docker. For a reminder of installation and 
+                                                            startup instructions, see the Github repo's README file.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card">
+                                                <div class="card-header">
+                                                     <a class="card-link collapsed" data-toggle="collapse" data-parent="#card-556731" href="#card-element-430862">Additional Details</a>
+                                                </div>
+                                                <div id="card-element-430862" class="collapse">
+                                                    <div class="card-body">
+                                                        <p>
+                                                            Ocelot is Free and Open-Source Software (FOSS). All source code is open and can be freely 
+                                                            reviewed and edited.
+                                                        </p>
+                                                        <p>
+                                                            For your privacy, the only communication Ocelot has outside your local machine is 
+                                                            with the Opacity web services.
+                                                        </p>
+                                                        <p>
+                                                            Ocelot comes with all the tools necessary to rebuild the application since it runs entirely within Docker. 
+                                                            You are free and encouraged to tailor the application to your own needs. Simply change configuration and code 
+                                                            as you see fit, and rerun the startup script. If you develop features or fix defects that you think others 
+                                                            will benefit from, feel free to fork the repo and make a pull request.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a id="modal-517934" href="#modal-container-517934" class="nav-link" data-toggle="modal">Support Development</a>
+                        </li>
+                        <!-- Modal -->
+                        <div class="modal fade" id="modal-container-517934" tabindex="-1" role="dialog" aria-labelledby="supportDevelopmentLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="supportDevelopmentLabel">Support Ongoing Development and Maintenance of Ocelot</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                    </div>
+                                    <div class="modal-body mx-4">
+                                        <div class="row">
+                                            <div class="col-md-3"></div>
+                                            <div class="col-md-6 mb-4 mt-2">
+                                                <p>
+                                                    Ocelot is developed by an Opacity community developer.
+                                                    Please consider supporting development efforts if you
+                                                    have benefited from this software. Several options
+                                                    for donating are listed below.
+                                                </p>
+                                            </div>
+                                            <div class="col-md-3"></div>
+                                        </div>
+                                        <form>
+                                            <div class="form-group row">
+                                                <div class="col-md-3 mt-2 mb-2">
+                                                    <button type="button" class="btn btn-sm btn-primary float-right" onclick="return c_setClipboard('#ethAddress');">Copy ETH Address</button>
+                                                </div>
+                                                <div class="col-md-9 mt-2 mb-2">
+                                                    <h6>Ethereum (ETH) Address</h6>
+                                                    <p id="ethAddress">0x894c09C47bBD48fc2A361882cB013E17CC619799</p>
+                                                </div>
+                                            </div>
+                                        </form>
+                                        <form>
+                                            <div class="form-group row">
+                                                <div class="col-md-3 mt-2 mb-2">
+                                                    <button type="button" class="btn btn-sm btn-primary float-right" onclick="return c_setClipboard('#btcAddress');">Copy BTC Address</button>
+                                                </div>
+                                                <div class="col-md-9 mt-2 mb-2">
+                                                    <h6>Bitcoin (BTC) Address</h6>
+                                                    <p id="btcAddress">3GtpwPY2rt5KX95DeE3FX1GHGp6XnQWQmu</p>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div><!-- /.modal-content -->
+                            </div><!-- /.modal-dialog -->
+                        </div><!-- /.modal -->
+                    </div>
+                    <div class="view">
+                        <li class="nav-item">
+                            <a class="nav-link">Ocelot v{{config['OCELOT_VERSION']}}</a>
+                        </li>
+                    </div>
+                </ul>
+            </div>
+        </div>
+        <!-- END--main menu -->
+        <!-- BEGIN--modal for remove account confirmation -->
+        <div class="view">
+            <div class="modal fade" id="removeAccountConfirmModal" tabindex="-1" role="dialog" aria-labelledby="removeConfirmationLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Remove Account Confirmation</h4>
+                            <button type="button" class="close" data-dismiss="modal" onclick="c_showModal('#loadAccountModal');"><span aria-hidden="true">×</span></button>
+                        </div>
+                        <div class="modal-body mx-4">
+                            <h6>Please confirm:</h6>
+                            <ol>
+                                <li>Remove metadata only (account details and file indexes)</li>
+                                <li>Remove metadata and all local files (send to trashcan)</li>
+                            </ol>
+                            <div class="col-md-12 mt-3 mb-3">
+                                <button id="removeAccountBtn" class="btn btn-sm btn-warning" data-dismiss="modal" onclick="return c_removeAccount(false);">Remove Account Metadata</button>
+                            </div>
+                            <div class="col-md-12 mt-3 mb-3">
+                                <button id="removeAccountBtn" class="btn btn-sm btn-danger" data-dismiss="modal" onclick="return c_removeAccount(true);">Remove Account Metadata and Local Files</button>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" onclick="c_showModal('#loadAccountModal');">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END--modal for remove account confirmation -->
+        <!-- BEGIN--modal for file action selection and confirmation -->
+        <div class="view">
+            <div class="modal fade" id="fileActionSelectionModal" tabindex="-1" role="dialog" aria-labelledby="fileActionSelectionModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Perform Action on Selected Files</h4>
+                            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        </div>
+                        <div class="modal-body mx-4" style="overflow-x:auto">
+                            <h6>What action do you want to perform on these files?</h6>
+                            <div class="btn-toolbar" role="toolbar" aria-label="File actions">
+                                <div class="col-sm-12 col-md-12 col-lg-12 my-2">
+                                    <select class="form-control" id="selectedRowActions">
+                                        <option value="" disabled selected>Select File Action</option>
+                                        <option id="fa_download_file">Download/Sync to local storage</option>
+                                        <option id="fa_upload_file">Upload/Sync to Opacity</option>
+                                        <option id="fa_delete_file" value="deleteOpts">Delete file(s)</option>
+                                        <option id="fa_move_file" value="moveOpts">Move file(s) to different folder</option>
+                                        <option id="fa_rename_file" value="renameOpts">Rename a single file</option>
+                                    </select>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteOpts">
+                                    <select class="form-control mb-2" id="deleteActionsFileVersions">
+                                        <option value="" disabled selected>Select a Specific Delete Action</option>
+                                        <option id="fa_delete_current_file_version">Delete only current file version</option>
+                                        <option id="fa_delete_all_file_versions">Delete file(s) and all file versions</option>
+                                    </select>
+                                    <select class="form-control mb-2" id="deleteActionsStorageLocation">
+                                        <option value="" disabled selected>Select from which Storage Location to Delete File</option>
+                                        <option id="fa_delete_remote">Delete from Opacity storage only</option>
+                                        <option id="fa_delete_local">Delete from local storage only</option>
+                                        <option id="fa_delete_remote_and_local">Delete from both Opacity and local storage</option>
+                                    </select>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveOpts">
+                                    <select class="form-control mb-2" id="moveFileToDirLocation">
+                                    </select>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12 my-2" id="renameOpts">
+                                    <form>
+                                        <div class="form-group">
+                                            <label for="renameFileInput">Rename file</label>
+                                            <input type="text" class="form-control" id="renameFileInput" aria-describedby="renameFile" placeholder="Provide New File Name Including File Extension (e.g. movie.mp4)">
+                                            <small id="renameFile" class="form-text text-muted">
+                                                Select only one file at a time to rename to avoid an error.
+                                            </small>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div>
+                                <table id="myTableSelections" class="table table-sm table-hover table-bordered display" style="width:100%">
+                                    <thead class="text-white bg-dark">
+                                        <tr>
+                                            <th>Selected File</th>
+                                            <th>Synced Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                    <tfoot class="text-white bg-dark">
+                                        <tr>
+                                            <th>Selected File</th>
+                                            <th>Synced Status</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="return c_processFileAction();">Yes, do it!</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END--modal for file action selection and confirmation -->
+        <!-- BEGIN--modal for folder action selection and confirmation -->
+        <div class="view">
+            <div class="modal fade" id="folderActionSelectionModal" tabindex="-1" role="dialog" aria-labelledby="folderActionSelectionModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Perform Folder Actions</h4>
+                            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        </div>
+                        <div class="modal-body mx-4">
+                            <h6>What folder action do you want to perform?</h6>
+                            <div class="btn-toolbar" role="toolbar" aria-label="Folder actions">
+                                <div class="col-sm-12 col-md-12 col-lg-12 my-2">
+                                    <select class="form-control" id="folderActions">
+                                        <option value="" disabled selected>Select folder action</option>
+                                        <option id="da_create_folder" value="createFolderOpts">Create a folder</option>
+                                        <option id="da_rename_folder" value="renameFolderOpts">Rename a folder</option>
+                                        <option id="da_delete_folder" value="deleteFolderOpts">Delete a folder</option>
+                                        <option id="da_move_folder" value="moveFolderOpts">Move a folder</option>
+                                    </select>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="createFolderOpts">
+                                    <form>
+                                        <div class="form-group">
+                                            <select class="form-control mb-2" id="createFolderSelection">
+                                            </select>
+                                            <input type="text" class="form-control" id="createFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
+                                            <small class="form-text text-muted">
+                                                Avoid special characters/symbols in folder name to prevent unexpected results.
+                                            </small>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteFolderOpts">
+                                    <select class="form-control mb-2" id="deleteFolderSelection">
+                                    </select>
+                                    <select class="form-control mb-2" id="deleteFolderStorageLocation">
+                                        <option value="" disabled selected>Select from which Storage Location to Delete Folder</option>
+                                        <option id="da_delete_remote">Delete from Opacity storage only</option>
+                                        <option id="da_delete_local">Delete from local storage only</option>
+                                        <option id="da_delete_remote_and_local">Delete from both Opacity and local storage</option>
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        WARNING! Deleting a folder will delete all files within it, all subfolders within it, 
+                                        and all files within those subfolders. If deleting a lot of files from Opacity Storage, 
+                                        expect this action to take some time to complete. e.g. Opacity broker will delete about 
+                                        50 files per minute.
+                                    </small>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="renameFolderOpts">
+                                    <form>
+                                        <div class="form-group">
+                                            <select class="form-control mb-2" id="renameFolderSelection">
+                                            </select>
+                                            <input type="text" class="form-control" id="renameFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
+                                            <small class="form-text text-muted">
+                                                Avoid special characters/symbols in folder name to prevent unexpected results. 
+                                                WARNING! If folder with same name exists in destination, its contents will be overwritten 
+                                                on your local file system and on Opacity.
+                                            </small>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveFolderOpts">
+                                    <select class="form-control mb-2" id="moveFolderFromSelection">
+                                    </select>
+                                    <select class="form-control mb-2" id="moveFolderToSelection">
+                                    </select>
+                                    <small class="form-text text-muted">
+                                        WARNING! If folder with same name exists in destination, its contents will be overwritten on your local file system, 
+                                        but on Opacity its contents will be retained and merged with the moved folder's contents.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="return c_processFolderAction();">Yes, do it!</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END--modal for folder action selection and confirmation -->
+        <!-- BEGIN--modal for file version history -->
+        <div class="view">
+            <div class="modal fade" id="fileVersionHistoryModal" style="max-width:none; height:100%;" tabindex="-1" role="dialog" aria-labelledby="fileVersionHistoryModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" style="max-width:90%;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">Review file version history</h4>
+                            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
+                        </div>
+                        <div class="modal-body mx-4" style="overflow-x:auto">
+                            <p>Version history can include duplicates as well as genuine version changes.
+                                Each file however will still have a unique file handle.
+                            </p>
+                            <div>
+                                <table id="fileVersionHistoryTable" class="table table-sm table-hover table-bordered display" style="width:100%">
+                                    <thead class="text-white bg-dark">
+                                        <tr>
+                                            <th>Selected File</th>
+                                            <th>Size Rounded</th>
+                                            <th>Size (Bytes)</th>
+                                            <th>Last Modified Date/Time</th>
+                                            <th>Unix Epoch Modify Time</th>
+                                            <th>Share Link</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    </tbody>
+                                    <tfoot class="text-white bg-dark">
+                                        <tr>
+                                            <th>Selected File</th>
+                                            <th>Size Rounded</th>
+                                            <th>Size (Bytes)</th>
+                                            <th>Last Modified Date/Time</th>
+                                            <th>Unix Epoch Modify Time</th>
+                                            <th>Share Link</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- END--modal for file version history -->
+        <!-- BEGIN--main datatable -->
+        <table id="myTable" class="table table-sm table-hover table-bordered display" style="width:100%">
+            <thead class="text-white bg-dark">
+                <tr>
+                    {% for header in headers %}
+                    <th>{{header[0]}}</th>
+                    {% endfor %}
+                </tr>
+            </thead> 
+            <tfoot class="text-white bg-dark">
+                <tr>
+                    {% for header in headers %}
+                    <th>{{header[0]}}</th>
+                    {% endfor %}
+                </tr>
+            </tfoot>
+        </table>
+        <!-- END--main datatable -->
+    </div>
+    <!-- END--primary body wrapper -->  
+
+    <script src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='popper.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='jquery.dataTables.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='dataTables.select.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='dataTables.bootstrap4.min.js') }}"></script>
+
+    <script>
+        // global vars
+        var act = {};                           // for main table data
+        var file_lookup_version_history = {};   // required by file version modal
+        var file_selected_version_history = ""; // required by file version modal
+        var loaded_account_db_id = 0;           // track which account is loaded
+
+        // BEGIN onload events
+        window.addEventListener('load', function() {
+            // Add select options for existing accounts to load
+            c_loadAccountsToSelect()
+
+            act.dataTable = $('#myTable').DataTable( {
+                columnDefs: [
+                    {
+                        "targets": [ 0 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 1 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 2 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 3 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 4 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 5 ],
+                        "searchable": false
+                    },
+                    {
+                        "targets": [ 6 ],
+                        "searchable": false
+                    },
+                    {
+                        "targets": [ 7 ],
+                        "searchable": true
+                    },
+                    {
+                        "targets": [ 8 ],
+                        "searchable": false,
+                        "visible": false
+                    },
+                    {
+                        "targets": [ 9 ],
+                        "searchable": false
+                    }
+                ], 
+                select: {
+                    style: 'multi'
+                },
+                order: [[ 3, "asc" ], [0, "asc"]],
+                dom: "<'#rowAboveDataTable.row'<'col-sm-12 col-md-3 col-lg-2'l><'col-sm-12 col-md-4 col-lg-3'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row'<'col-sm-12 col-md-6'p><'col-sm-12 col-md-6'i>>"
+            });
+
+            $( "#rowAboveDataTable" ).append(
+                `<div class="col-sm-12 col-md-4 col-lg-3">
+                    <select class="form-control" id="fileType" onchange="c_filterTable(1, 'fileType');">
+                        <option value="" disabled selected>File Type Filter</option>
+                    </select>
+                </div>
+                <div class="col-sm-12 col-md-4 col-lg-3">
+                    <select class="form-control" id="syncStatus" onchange="c_filterTable(7, 'syncStatus');">
+                        <option value="" disabled selected>Sync Status Filter</option>
+                    </select>
+                </div>`
+            );
+
+            $( "#rowAboveDataTable" ).after(
+                `<div class="row">
+                    <div class="col-md-12 mt-3">
+                        <div class="btn-toolbar" role="toolbar" aria-label="Table Actions">
+                            <button class="btn btn-sm btn-primary my-1 mx-1" type="button" id="FileActions" onclick="c_showModal('#fileActionSelectionModal');">
+                                File Actions
+                            </button>
+                            <button class="btn btn-sm btn-primary my-1 mx-1 mr-4" type="button" id="FolderActions" onclick="c_showModal('#folderActionSelectionModal');">
+                                Folder Actions
+                            </button>
+                            <button class="btn btn-sm btn-success my-1 mx-1" type="button" id="SelectRows" onclick="return c_selectAllTableRows()">
+                                Select All
+                            </button>
+                            <button class="btn btn-sm btn-warning my-1 mx-1 mr-4" type="button" id="DeselectRows" onclick="return c_deselectAllTableRows()">
+                                Deselect All
+                            </button>
+                            <button class="btn btn-sm btn-secondary my-1 mx-1" type="button" id="ResetSort" onclick="return c_resetSortOrder()">
+                                Default Sort
+                            </button>
+                            <button class="btn btn-sm btn-secondary my-1 mx-1 mr-4" type="button" id="ResetFilters" onclick="return c_clearFilters()">
+                                Reset Filters
+                            </button>
+                            <button class="btn btn-sm btn-danger spinner my-1 mx-1" type="button" onclick="return c_loadAccountTableData(true);">
+                                Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>`
+            );
+
+            // BEGIN--file actions modal
+            $("#fileActionSelectionModal").on('shown.bs.modal', function () {
+                // remove any existing rows from previous selections
+                $('#myTableSelections tbody').empty();
+                // show selected rows
+                selected_rows = act.dataTable.rows( { selected: true } ).data();
+                for (var i = 0; i < selected_rows.length; i++) {
+                    var file_path = ""
+                    if (selected_rows[i][3] == '/') {
+                        file_path = `/${selected_rows[i][0]}`
+                    } else {
+                        file_path = `${selected_rows[i][3]}/${selected_rows[i][0]}`
+                    }
+                    var newRowContent = `<tr><td>${file_path}</td><td>${selected_rows[i][7]}</td>`;
+                    $("#myTableSelections tbody").append(newRowContent);
+                }
+            });
+
+            // Create conditionally displayed form input elements on file action modal
+            $.fileActionExpand = {
+                '0' : $([]),
+                'deleteOpts' : $('#deleteOpts'),
+                'moveOpts' : $('#moveOpts'),
+                'renameOpts' : $('#renameOpts')
+            };
+
+            $('#selectedRowActions').change(function() {
+                // hide all
+                $.each($.fileActionExpand, function() { this.hide(); });
+                // show hidden div for option if it has been defined in map above
+                if ($(this).val() in $.fileActionExpand) {
+                    $.fileActionExpand[$(this).val()].show();
+                }
+            });
+            // END--file actions modal
+
+            // BEGIN--folder actions modal
+            // Create conditionally displayed form input elements on folder actions modal
+            $.folderActionExpand = {
+                '0' : $([]),
+                'createFolderOpts' : $('#createFolderOpts'),
+                'deleteFolderOpts' : $('#deleteFolderOpts'),
+                'moveFolderOpts' : $('#moveFolderOpts'),
+                'renameFolderOpts' : $('#renameFolderOpts')
+            };
+
+            $('#folderActions').change(function() {
+                // hide all
+                $.each($.folderActionExpand, function() { this.hide(); });
+                // show current
+                $.folderActionExpand[$(this).val()].show();
+            });
+            // END--folder actions modal
+        })
+        // END onload events
+
+        // BEGIN other functions
+        function c_loadAccountsToSelect(){
+            // Load saved accounts for select box
+            $.post("/account/get-all")
+            .done(function(response) {
+                document.querySelectorAll('#loadAccount, #removeAccount').forEach(element => {
+                    // remove existing options each time
+                    while (element.firstChild) {
+                        element.removeChild(element.lastChild);
+                    }
+                    // create empty select and make "selected"
+                    var option = document.createElement("option");
+                    option.selected="selected";
+                    element.add(option);
+                    // update with new options received from server
+                    response.forEach(val => {
+                        var option = document.createElement("option");
+                        option.text = `Name: ${val.handle_name} | Total Size: ${val.storage_capacity}GB | Expire Date: ${val.expiration_date} | Handle Starts With: ${val.handle}`;
+                        option.id = val.id;
+                        element.add(option);
+                    })
+                })
+
+                document.querySelectorAll('#accountPathDetail').forEach(element => {
+                    // remove existing options each time
+                    while (element.firstChild) {
+                        element.removeChild(element.lastChild);
+                    }
+                    // add data back
+                    let i = 0
+                    let home = $('#opacityFileExplorerPath').text()
+                    response.forEach(val => {
+                        let path = (home[0] == '/' ? `${home}/${val.handle}` : `${home}\\${val.handle}`)
+                        let html = `<div class="form-group row">
+                                        <div class="col-md-2 mt-2 mb-2">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="return c_setClipboard('#accountPath${i}');">Copy Path</button>
+                                        </div>
+                                        <div class="col-md-10 mt-2 mb-2">
+                                            <p><b>${val.handle_name}:</b> <span id="accountPath${i}">${path}</span></p>
+                                        </div>
+                                    </div>`
+                        $('#accountPathDetail').append(html)
+                        i+=1
+                    })
+                })
+            })
+        }
+
+        function c_addNewAccount(){
+            var handle_name = document.getElementById('handle_name').value;
+            var handle = document.getElementById('handle').value;
+            c_addSpinner()
+            $.ajax({
+                type:"post",
+                url:"/account/add-new",
+                data: 
+                {  
+                    'handle_name':handle_name,
+                    'handle':handle
+                },
+                cache:false,
+                success: function (data)
+                {
+                    alert(data);
+                    c_removeSpinner()
+                    c_loadAccountsToSelect()
+                },
+                error: function(XMLHttpRequest, textStatus, errorThrown) {
+                    c_removeSpinner()
+                    alert("Status: " + textStatus); alert("Error: " + errorThrown);
+                }
+            });
+            return false;
+        }
+
+        function c_addSpinner(){
+            $( "#loadAccountLabel" ).after( `<button id="spinnerButton" style="margin-left: 3%;" class="btn btn-primary" disabled><span class="spinner-grow spinner-grow-sm"></span>Loading..</button>`);
+            $( ".spinner" ).prop('disabled', true);
+            $( ".spinner" ).append(`<span class="spinner-grow spinner-grow-sm"></span>`)
+        }
+
+        function c_removeSpinner(){
+            $( "#spinnerButton" ).remove()
+            $( ".spinner" ).prop('disabled', false);
+            $( ".spinner > span" ).remove()
+        }
+
+        function c_processFileAction(){
+            var primary_action = document.querySelector('#selectedRowActions option:checked').id;
+            var delete_version = document.querySelector('#deleteActionsFileVersions option:checked').id;
+            var delete_storage = document.querySelector('#deleteActionsStorageLocation option:checked').id;
+            var rename_value = document.querySelector('[id="renameFileInput"]').value;
+            var moveto_directory = document.querySelector('#moveFileToDirLocation option:checked').value;
+            
+            // perform user validation before sending to server
+            console.log(`primary action selected is ${primary_action}`)
+            if (!primary_action) {
+                alert("No action selected yet. Please verify.")
+                return
+            }
+            if (primary_action == "fa_delete_file") {
+                if (!delete_version || !delete_storage) {
+                    alert("All delete selections are required. Please verify.")
+                    return
+                }
+            }
+            if (primary_action == "fa_move_file") {
+                if (!moveto_directory) {
+                    alert("No directory selected. Please select destination directory and try again.")
+                    return
+                }
+            }
+            if (primary_action == "fa_rename_file") {
+                if (!rename_value) {
+                    alert("File name is missing. Please provide file name.")
+                    return
+                }
+                if (act.dataTable.rows( { selected: true } ).data().length > 1) {
+                    alert("You can rename only one file at a time. Deselected all files except for the file you want to rename.")
+                    return                    
+                }
+            }
+
+            // get rows selected within data table
+            selected_rows = act.dataTable.rows( { selected: true } ).data();
+            // need to select at least one file from table
+            if (!selected_rows[0]) {
+                alert("No rows selected from table. Please select one or more rows first.")
+                return
+            }
+
+            // send list of directories and filedata as a group. iterate on server.
+            let dirs = new Set()
+            let filedata_array = new Array()
+            for (var i = 0; i < selected_rows.length; i++) {
+                // [file name, directory full path, file handle]
+                filedata_array.push([selected_rows[i][0], selected_rows[i][3], selected_rows[i][8]])
+                dirs.add(selected_rows[i][3])
+            }
+
+            $.ajax({
+                    type:"post",
+                    url:"/file/action",
+                    data: JSON.stringify({
+                        'selected_action': primary_action,
+                        'delete_version': delete_version,
+                        'delete_storage': delete_storage,
+                        'rename_value': rename_value,
+                        'handle_id': loaded_account_db_id,
+                        'array_of_directories': Array.from(dirs),
+                        'array_of_filedata': filedata_array,
+                        'moveto_directory': moveto_directory
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    cache:false,
+                    success: function (data)
+                    {
+                        console.log(data);
+                    }
+                });
+
+            document.getElementById("selectedRowActions").selectedIndex = 0;
+            document.getElementById("deleteActionsFileVersions").selectedIndex = 0;
+            document.getElementById("deleteActionsStorageLocation").selectedIndex = 0;
+            document.getElementById("renameFileInput").value = "";
+            document.getElementById("moveFileToDirLocation").selectedIndex = 0;
+            $.each($.fileActionExpand, function() { this.hide(); });
+            alert("File(s) successfully queued for requested action.")
+            return false
+        }
+
+        function c_processFolderAction(){
+            var primary_action = document.querySelector('#folderActions option:checked').id;
+            var parent_dir_of_create_folder = document.querySelector('#createFolderSelection option:checked').id;
+            var create_folder_new_name = document.querySelector('[id="createFolderInput"]').value;
+            var movefrom_folder = document.querySelector('#moveFolderFromSelection option:checked').id;
+            var moveto_folder = document.querySelector('#moveFolderToSelection option:checked').id;
+            var rename_folder_path = document.querySelector('#renameFolderSelection option:checked').id;
+            var rename_folder_new_name = document.querySelector('[id="renameFolderInput"]').value;
+            var delete_folder = document.querySelector('#deleteFolderSelection option:checked').id;
+            var delete_storage_option = document.querySelector('#deleteFolderStorageLocation option:checked').id;
+            
+            // perform user validation before sending to server
+            console.log(`primary action selected is ${primary_action}`)
+            if (!primary_action) {
+                alert("No action selected yet. Please verify.")
+                return
+            }
+            if (primary_action == "da_create_folder") {
+                if (!createFolderSelection || !createFolderInput) {
+                    alert("Please select a folder and provide a new name for it.")
+                    return
+                }
+            }
+            if (primary_action == "da_delete_folder") {
+                if (!deleteFolderSelection || !deleteFolderStorageLocation) {
+                    alert("All delete selections are required. Please verify.")
+                    return
+                }
+            }
+            if (primary_action == "da_move_folder") {
+                if (!moveFolderFromSelection || !moveFolderToSelection) {
+                    alert("Please select a folder to move and a new destination for the folder.")
+                    return
+                }
+            }
+            if (primary_action == "da_rename_folder") {
+                if (!renameFolderSelection || !renameFolderInput) {
+                    alert("Please select a folder and provide a new name for it.")
+                    return
+                }
+            }
+
+            $.ajax({
+                    type:"post",
+                    url:"/folder/action",
+                    data: JSON.stringify({
+                        'selected_action': primary_action,
+                        'parent_dir_of_create_folder': parent_dir_of_create_folder,
+                        'create_folder_new_name': create_folder_new_name,
+                        'movefrom_folder': movefrom_folder,
+                        'moveto_folder': moveto_folder,
+                        'rename_folder_path': rename_folder_path,
+                        'rename_folder_new_name': rename_folder_new_name,
+                        'delete_folder': delete_folder,
+                        'delete_storage_option': delete_storage_option,
+                        'handle_id': loaded_account_db_id
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    cache:false,
+                    success: function (data)
+                    {
+                        console.log(data);
+                    }
+                });
+
+            document.getElementById("folderActions").selectedIndex = 0;
+            document.getElementById("createFolderSelection").selectedIndex = 0;
+            document.getElementById("createFolderInput").value = "";
+            document.getElementById("moveFolderFromSelection").selectedIndex = 0;
+            document.getElementById("moveFolderToSelection").selectedIndex = 0;
+            document.getElementById("renameFolderSelection").selectedIndex = 0;
+            document.getElementById("renameFolderInput").value = "";
+            document.getElementById("deleteFolderSelection").selectedIndex = 0;
+            document.getElementById("deleteFolderStorageLocation").selectedIndex = 0;
+            $.each($.folderActionExpand, function() { this.hide(); });
+            alert("Folder successfully queued for requested action.")
+            return false
+        }
+
+        function c_getRefreshProgress(handle_id){
+            $.ajax({
+                type: "post",
+                url: "/status/file-index-refresh",
+                data: 
+                {  
+                    'handle_id': handle_id
+                },
+                dataType: 'json',
+                cache: false,
+                success: function (data) {
+                    var current_loaded_handle_id = document.querySelector('#loadAccount option:checked').id;
+                    if (data["status"] == "success") {
+                        if(current_loaded_handle_id == handle_id) {
+                            // first clear any existing data and applied filters
+                            c_clearFilters()
+                            act.dataTable.clear().draw()
+                            // add file lookup data to global var; used for version history
+                            file_lookup_version_history = data["data"]["file_lookup"]
+                            // load data
+                            $.each(data["data"]["data"], function(index, value) {
+                                // check if file has a handle. if so, create link for it.
+                                value[9] = "";
+                                if (value[8]) {
+                                    value[6] = `<a target="_blank" rel="noopener noreferrer" href="https://opacity.io/share#handle=${value[8]}">link</a>`;
+                                    if(value[3]=="/") {
+                                        value[9] = `<a href="#" onclick="c_showModal('#fileVersionHistoryModal', '/${value[0]}');">link</a>`;
+                                    } else {
+                                        value[9] = `<a href="#" onclick="c_showModal('#fileVersionHistoryModal', '${value[3]}/${value[0]}');">link</a>`;
+                                    }
+                                }
+                            });
+                            act.dataTable.rows.add(data["data"]["data"]).draw();
+                            // Add select options for file type based on values in the table
+                            var fileTypeOpts = act.dataTable.column(1).data().unique().sort()
+                            c_refresh_picklist(fileTypeOpts, "fileType", "File Type Filter")
+                            var syncStatusOpts = act.dataTable.column(7).data().unique().sort()
+                            c_refresh_picklist(syncStatusOpts, "syncStatus", "Sync Status Filter")
+                            // Add directory picklist for "move" file action
+                            let dirPicklist = data["data"]["directories"]["merged"]
+                            let dirPicklistWithRoot = ['/'].concat(dirPicklist)
+                            c_refresh_picklist(dirPicklistWithRoot, "moveFileToDirLocation", "Select Destination Folder")
+                            c_refresh_picklist(dirPicklistWithRoot, "createFolderSelection", "Select Parent Folder of New Folder")
+                            c_refresh_picklist(dirPicklist, "moveFolderFromSelection", "Select Folder to Move")
+                            c_refresh_picklist(dirPicklistWithRoot, "moveFolderToSelection", "Select New Destination Folder")
+                            c_refresh_picklist(dirPicklist, "renameFolderSelection", "Select Folder to Rename")
+                            c_refresh_picklist(dirPicklist, "deleteFolderSelection", "Select Folder to Delete (including contents)")
+                            c_removeSpinner()
+                            c_hideModal("#loadAccountModal")
+                        } else {
+                            alert("File index has been refreshed for an account other than the one currently loaded, so not loading.")
+                            return false
+                        }
+                    } else if(data["status"] == "pending") {
+                        // rerun in 2 seconds
+                        setTimeout(function() {
+                            c_getRefreshProgress(handle_id);
+                        }, 2000);
+                    } else {alert("Table data failed to load unexpectedly.")}
+                }, error: function(XMLHttpRequest, textStatus, errorThrown) {
+                        c_removeSpinner()
+                        alert("Status: " + textStatus); alert("Error: " + errorThrown); 
+                }
+            })
+            return false
+        }
+
+        function c_loadAccountTableData(refresh_bool = false){
+
+            var handle_id = document.querySelector('#loadAccount option:checked').id;
+            // update global variable to keep track of which account is loaded
+            loaded_account_db_id = handle_id
+
+            if (handle_id) {
+                c_addSpinner()
+
+                $.ajax({
+                    type: "post",
+                    url: "/account/load-data",
+                    data: 
+                    {  
+                        'handle_id': handle_id,
+                        'refresh': refresh_bool
+                    },
+                    dataType: 'json',
+                    cache: false,
+                    success: function (data)
+                    {
+                        if(refresh_bool) alert(data["msg"])
+                        c_getRefreshProgress(handle_id);
+                    },
+                    error: function(XMLHttpRequest, textStatus, errorThrown) {
+                        c_removeSpinner()
+                        alert("Status: " + textStatus); alert("Error: " + errorThrown); 
+                    }
+                });
+            } else {
+                alert("Select account to load first.")
+            }
+
+            return false;
+        }
+
+        function c_refresh_picklist(uniqueColValues, elementId, placeholderText){
+            // Add select options based on values in the table
+
+            document.querySelectorAll(`#${elementId}`).forEach(element => {
+                // remove existing options each time
+                while (element.firstChild) {
+                    element.removeChild(element.lastChild);
+                }
+
+                // create empty select and make "selected"
+                var empty_option = document.createElement("option");
+                empty_option.selected="selected";
+                empty_option.text = placeholderText;
+                empty_option.setAttribute("disabled", "");
+                element.add(empty_option);
+                
+                for (index = 0; index < uniqueColValues.length; index++) { 
+                    var option = document.createElement("option");
+                    option.text = uniqueColValues[index];
+                    option.id = uniqueColValues[index];
+                    element.add(option);
+                }
+            })
+        }
+
+        function c_filterTable(colId, elementId){
+            var searchValue = document.querySelector(`#${elementId}`).value.trim()
+            act.dataTable.column(colId).search(`${searchValue}`).draw()
+        }
+
+        function c_removeAccount(delete_files = false){
+            var handle_id = document.querySelector('#removeAccount option:checked').id;
+            $.ajax({
+                type:"post",
+                url:"/account/delete",
+                data: 
+                {  
+                    'handle_id':handle_id,
+                    'delete_files_bool': delete_files
+                },
+                cache:false,
+                success: function (data)
+                {
+                    alert(data);
+                    c_loadAccountsToSelect();
+                }
+            });
+            c_showModal("#loadAccountModal")
+            return false;
+        }
+
+        function c_showModal(elementid, file_lookup = false){
+            if (file_lookup) {
+                file_selected_version_history = file_lookup
+            }
+            $(elementid).modal("show");
+        }
+
+        function c_hideModal(elementid){
+            $(elementid).modal("hide");
+        }
+
+        function c_clearFilters () {
+            // Reset File Type Filter
+            selectElement = document.getElementById("fileType");
+            selectElement.selectedIndex = 0;
+            // Reset Sync Status Filter
+            selectElement = document.getElementById("syncStatus");
+            selectElement.selectedIndex = 0;
+            // Reset full text search
+            $('#myTable_filter').find("input").val('')
+            // display all data
+            act.dataTable.search( '' ).columns().search( '' ).draw();
+        }
+
+        function c_resetSortOrder() {
+            act.dataTable.order([3, 'asc'], [0, 'asc']).draw()
+        }
+
+        function c_clearFormFields(formId) {
+            document.getElementById(formId).reset();
+        }
+
+        function c_selectAllTableRows() {
+            act.dataTable.rows({ search: 'applied' }).select()
+        }
+
+        function c_deselectAllTableRows() {
+            act.dataTable.rows(".selected").deselect()
+        }
+
+        async function c_setClipboard(element) {
+            var text = $( element ).text();
+            try {
+                await navigator.clipboard.writeText(text)
+                alert(`The following text successfully copied to the clipboard:\n\n ${text}`)
+            } catch (err) {
+                console.error('Failed to copy to clipboard!', err)
+            }
+            return false;
+        }
+
+        // BEGIN--file version history modal
+        $("#fileVersionHistoryModal").on('shown.bs.modal', function () {
+            // remove any existing rows from previous selections
+            $('#fileVersionHistoryTable tbody').empty();
+            // select data using file abs path as id
+            // file_selected_version_history is global var updated when file link is clicked
+            file_data = file_lookup_version_history[file_selected_version_history]["remote"]
+            for (var i = 0; i < file_data.length; i++) {
+                var newRowContent = `<tr>
+                                        <td>${file_data[i][3]}</td>
+                                        <td>${file_data[i][9]}</td>
+                                        <td>${file_data[i][4]}</td>
+                                        <td>${file_data[i][10]}</td>
+                                        <td>${file_data[i][6]}</td>
+                                        <td><a target="_blank" rel="noopener noreferrer" href="https://opacity.io/share#handle=${file_data[i][7]}">link</a></td>
+                                    </tr>`;
+                $("#fileVersionHistoryTable tbody").append(newRowContent);
+            }
+        });
+        // END--file version history modal
+
+        // END other functions
+    </script>
+  </body>
+</html>

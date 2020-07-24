@@ -1,0 +1,24 @@
+FROM python:3.6
+
+RUN useradd -d /home/opacity -m opacity
+WORKDIR /home/opacity
+
+# If pulling directly from repo, use:
+#ADD https://github.com/<user>/<repo>/tarball/master .
+#RUN tar xpvf master --strip-components=1
+
+RUN python3 -m venv venv
+RUN venv/bin/pip3 install --upgrade pip
+RUN venv/bin/pip3 install wheel
+COPY requirements_webapp.txt requirements_webapp.txt
+RUN venv/bin/pip3 install -r requirements_webapp.txt
+
+# use for local development
+COPY app app
+COPY common/functions.py app/functions.py
+COPY opacity_webapp.py opacity_webapp.py
+COPY start_webapp.sh start_webapp.sh
+
+#RUN chown -R opacity:opacity ./data
+
+USER opacity

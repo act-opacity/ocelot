@@ -1,0 +1,35 @@
+FROM ubuntu:18.04
+
+RUN apt-get update && apt-get install -y \
+  freeglut3-dev \
+  libglu1-mesa-dev \
+  libgmp3-dev \
+  libssl-dev \
+  mesa-common-dev \
+  python3-pip \
+  python-dev \
+  python3-venv \
+  vim
+
+RUN useradd -d /home/opacity -m opacity
+WORKDIR /home/opacity
+
+# If pulling directly from repo, use:
+#ADD https://github.com/<user>/<repo>/tarball/master .
+#RUN tar xpvf master --strip-components=1
+
+RUN python3 -m venv venv
+RUN venv/bin/pip3 install wheel
+
+COPY requirements_opacity_api.txt requirements_opacity_api.txt
+RUN venv/bin/pip3 install -r requirements_opacity_api.txt
+
+COPY requirements_celeryworker.txt requirements_celeryworker.txt
+RUN venv/bin/pip3 install -r requirements_celeryworker.txt
+
+# use for local development
+COPY tasks tasks
+COPY common/functions.py tasks/functions.py
+#RUN chown -R opacity:opacity ./data
+
+USER opacity
