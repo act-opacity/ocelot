@@ -104,6 +104,10 @@ services:
   rabbitmq:
     image: rabbitmq:3.8.5
     restart: always
+    environment:
+      - RABBITMQ_CONFIG_FILE=/tmp/rabbitmq.conf
+    volumes:
+      - ./rabbitmq.conf:/tmp/rabbitmq.conf
     expose:
       - "5672"
   redis:
