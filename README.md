@@ -1,5 +1,5 @@
 # Ocelot, an Opacity Storage Client Application
-Ocelot is a containerized web application that interfaces with the Opacity Storage web services. Ocelot is client software meant to be run on your local machine.
+Ocelot is a containerized web application that interfaces with the [Opacity Storage](https://www.opacity.io/) web services. Ocelot is client software meant to be run on your local machine.
 
 Since Ocelot uses Docker to run, it can be run on any device that supports Docker, including Windows, Macintosh (Mac) and Linux.
 
@@ -56,4 +56,4 @@ Linux users may have additional required steps to take to get Docker running ini
   * OpacityDrive for Mac/Linux will be located here: /home/<your_username>/OpacityDrive
 
 ## License
-Ocelot is [licensed](https://github.com/act-opacity/ocelot/blob/main/LICENSE) under the Apache License, Version 2.0.
+Ocelot is [licensed](https://github.com/act-opacity/ocelot/blob/master/LICENSE) under the Apache License, Version 2.0.
