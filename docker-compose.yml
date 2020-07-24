@@ -110,8 +110,8 @@ services:
     image: redis
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     restart: always
-    mem_limit: 120000000
-    memswap_limit: 150000000
+    mem_limit: 300000000
+    memswap_limit: 450000000
     mem_reservation: 25m
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
