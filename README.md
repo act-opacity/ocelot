@@ -19,22 +19,27 @@ Ocelot featured capabilities:
 #### Installation Dependencies: Docker
 The Docker Engine and the Docker CLI client are required to be installed on your machine (Windows, Mac, Linux).
 
-For Windows and Mac users, installing Docker Desktop is the easiest way to install the required Docker components and to have a way to manage Ocelot (start, stop, restart, remove) and monitor Ocelot (performance, logs) and its components. See instructions here: https://docs.docker.com/desktop/ .
+For Windows and Mac users, installing **Docker Desktop** is the easiest way to install the required Docker components and to have a way to manage Ocelot (start, stop, restart, remove) and monitor Ocelot (performance, logs) and its components. See instructions here: https://docs.docker.com/desktop/ .
 
-If you have an outdated version of Windows or Mac that doesn't support Docker Desktop, you can use the older Docker Toolbox instead. It is not as user friendly as Docker Desktop, and additional steps will need to be taken to get things working. Specifically:
+If you have an outdated version of Windows or Mac that doesn't support Docker Desktop, you can use **the older Docker Toolbox instead**. It is not as user friendly as Docker Desktop, and additional steps will need to be taken to get things working. Specifically:
 * if the Ocelot startup script mentions "docker daemon not running", you will need to determine how to start it on your machine. See this [Docker guide](https://docs.docker.com/machine/overview/) for reference.
-* you will need to run docker-machine ip to get your host IP and then replace references to "localhost" within Ocelot app components. So, for example, when Ocelot launches in the browser, you will need to replace "localhost:5000" with "192.168.99.100:5000". The provided start up script can be modified to automate this process as well.
+* you will need to run **docker-machine ip** to get your Docker host IP and then replace references to "localhost" within Ocelot app components. So, for example, when Ocelot launches in the browser, you will need to replace "localhost:5000" with "192.168.99.100:5000". The provided start up script can be modified to automate this process as well.
+* Windows users, the script named **5_start_ocelot_mswindows_docker-toolbox.bat** will automate these required steps to accommodate Docker Toolbox.
+* Mac users, a script specifically for use with Docker Toolbox hasn't been created yet, but you can follow steps mentioned above to understand what is required.
 
-Linux users may have additional required steps to take to get Docker running initially. e.g. adding your Linux username to the "docker" group.
+**Linux users** may have additional required steps to take to get Docker running initially. e.g. adding your Linux username to the "docker" group.
 
 #### Windows Users
 1. Download a zip file that contains the files of this repository. Click [this link](https://github.com/act-opacity/ocelot/archive/master.zip) to start the download.
 2. Unzip the downloaded file to a place you'll remember. The location will be used for starting and stopping Ocelot as needed.
 3. Navigate into the unzipped directory.
-4. Run/double click the file (startup script) named **"1_start_ocelot_mswindows.bat"**
-   * Doing so will download and configure Ocelot and then run it.
-   * This file can be used in the future to re-start Ocelot.
-   * To stop Ocelot for any reason (not required), run **"2_stop_ocelot_mswindows.bat"**
+4. Run the provided startup script. 
+   * If you have **Docker Desktop** installed, run this startup script: **"1_start_ocelot_mswindows.bat"**
+   * Otherwise, you'll need **Docker Toolbox** installed and you'll run this startup script: **"5_start_ocelot_mswindows_docker-toolbox.bat"**
+     * Running either script will download and configure Ocelot and then run it.
+     * This startup script can be used in the future to re-start Ocelot.
+     * Creating a desktop shortcut to this script is recommended.
+     * To stop Ocelot for any reason (not required), run **"2_stop_ocelot_mswindows.bat"**
 5. Done!
 
 #### Mac and Linux Users
