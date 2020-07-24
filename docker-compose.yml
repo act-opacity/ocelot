@@ -30,7 +30,7 @@ services:
     mem_limit: 120000000
     memswap_limit: 150000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=INFO", "--queues=primary_queue", "--hostname=primary@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=primary_queue", "--hostname=primary@%h"]
     env_file:
       - ./env.env
     depends_on:
@@ -47,7 +47,7 @@ services:
     mem_limit: 300000000
     memswap_limit: 350000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=INFO", "--queues=download_queue", "--hostname=downloads@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=download_queue", "--hostname=downloads@%h"]
     env_file:
       - ./env.env
     depends_on:
@@ -64,7 +64,7 @@ services:
     mem_limit: 300000000
     memswap_limit: 350000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=INFO", "--queues=upload_queue", "--hostname=uploads@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=8", "--loglevel=WARNING", "--queues=upload_queue", "--hostname=uploads@%h"]
     env_file:
       - ./env.env
     depends_on:
@@ -81,7 +81,7 @@ services:
     mem_limit: 120000000
     memswap_limit: 150000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=INFO", "--queues=metadata_queue", "--hostname=metadata@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=WARNING", "--queues=metadata_queue", "--hostname=metadata@%h"]
     env_file:
       - ./env.env
     depends_on:
@@ -104,6 +104,10 @@ services:
   rabbitmq:
     image: rabbitmq:3.8.5
     restart: always
+    environment:
+      - RABBITMQ_CONFIG_FILE=/tmp/rabbitmq.conf
+    volumes:
+      - ./rabbitmq.conf:/tmp/rabbitmq.conf
     expose:
       - "5672"
   redis:
