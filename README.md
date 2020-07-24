@@ -21,7 +21,9 @@ The Docker Engine and the Docker CLI client are required to be installed on your
 
 For Windows and Mac users, installing Docker Desktop is the easiest way to install the required Docker components and to have a way to manage Ocelot (start, stop, restart, remove) and monitor Ocelot (performance, logs) and its components. See instructions here: https://docs.docker.com/desktop/ .
 
-If you have an outdated version of Windows or Mac that doesn't support Docker Desktop, you can use the older Docker Toolbox instead.
+If you have an outdated version of Windows or Mac that doesn't support Docker Desktop, you can use the older Docker Toolbox instead. It is not as user friendly as Docker Desktop, and additional steps will need to be taken to get things working. Specifically:
+* if the Ocelot startup script mentions "docker daemon not running", you will need to determine how to start it on your machine. See this [Docker guide](https://docs.docker.com/machine/overview/) for reference.
+* you will need to run docker-machine ip to get your host IP and then replace references to "localhost" within Ocelot app components. So, for example, when Ocelot launches in the browser, you will need to replace "localhost:5000" with "192.168.99.100:5000". The provided start up script can be modified to automate this process as well.
 
 Linux users may have additional required steps to take to get Docker running initially. e.g. adding your Linux username to the "docker" group.
 
