@@ -1,0 +1,123 @@
+version: '2.4'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: dockerfile_webapp
+    image: ocelot
+    restart: always
+    mem_limit: 200000000
+    memswap_limit: 300000000
+    mem_reservation: 50m
+    command: [/bin/bash, start_webapp_https.sh]
+    env_file:
+      - env.env
+    environment:
+      - USER_HOME_PATH="${USERPROFILE}${HOME}"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  worker-primary:
+    build:
+      context: .
+      dockerfile: dockerfile_celeryworker
+    image: ocelot-queue-worker
+    restart: always
+    mem_limit: 120000000
+    memswap_limit: 150000000
+    mem_reservation: 25m
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=primary_queue", "--hostname=primary@%h"]
+    env_file:
+      - ./env.env
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  worker-download:
+    build:
+      context: .
+      dockerfile: dockerfile_celeryworker
+    image: ocelot-queue-worker
+    restart: always
+    mem_limit: 300000000
+    memswap_limit: 350000000
+    mem_reservation: 25m
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=download_queue", "--hostname=downloads@%h"]
+    env_file:
+      - ./env.env
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  worker-upload:
+    build:
+      context: .
+      dockerfile: dockerfile_celeryworker
+    image: ocelot-queue-worker
+    restart: always
+    mem_limit: 300000000
+    memswap_limit: 350000000
+    mem_reservation: 25m
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=8", "--loglevel=WARNING", "--queues=upload_queue", "--hostname=uploads@%h"]
+    env_file:
+      - ./env.env
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  worker-metadata:
+    build:
+      context: .
+      dockerfile: dockerfile_celeryworker
+    image: ocelot-queue-worker
+    restart: always
+    mem_limit: 120000000
+    memswap_limit: 150000000
+    mem_reservation: 25m
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=WARNING", "--queues=metadata_queue", "--hostname=metadata@%h"]
+    env_file:
+      - ./env.env
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  flower:
+    image: mher/flower
+    restart: always
+    mem_limit: 120000000
+    memswap_limit: 150000000
+    mem_reservation: 25m
+    env_file:
+      - ./env.env
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+  rabbitmq:
+    image: rabbitmq:3.8.5
+    restart: always
+    environment:
+      - RABBITMQ_CONFIG_FILE=/tmp/rabbitmq.conf
+    volumes:
+      - ./rabbitmq.conf:/tmp/rabbitmq.conf
+    expose:
+      - "5672"
+  redis:
+    image: redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    restart: always
+    mem_limit: 300000000
+    memswap_limit: 450000000
+    mem_reservation: 25m
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    expose:
+      - "6379"
