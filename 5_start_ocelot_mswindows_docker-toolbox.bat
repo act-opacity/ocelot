@@ -42,7 +42,7 @@ docker-compose stop
 echo. & ^
 echo.   Starting Ocelot. & ^
 echo.
-docker-compose up -d --remove-orphans
+docker-compose -f docker-compose-web-https.yml up -d --remove-orphans
 echo. & ^
 echo.
 for /F "tokens=* USEBACKQ" %%F in (`docker-machine ip`) do (
