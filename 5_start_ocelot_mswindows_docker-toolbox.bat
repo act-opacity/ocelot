@@ -34,7 +34,7 @@ docker-machine start default
 echo. & ^
 echo.   Running Docker build. & ^
 echo.
-docker-compose build
+docker-compose -f docker-compose-web-https.yml build
 echo. & ^
 echo.   Stopping Ocelot services if currently running. & ^
 echo.
@@ -42,19 +42,19 @@ docker-compose stop
 echo. & ^
 echo.   Starting Ocelot. & ^
 echo.
-docker-compose up -d --remove-orphans
+docker-compose -f docker-compose-web-https.yml up -d --remove-orphans
 echo. & ^
 echo.
 for /F "tokens=* USEBACKQ" %%F in (`docker-machine ip`) do (
 set ip=%%F
 )
 echo.
-echo.   start /max http://%ip%:5000/ & ^
+echo.   start /max https://%ip%:5000/ & ^
 echo.
 echo.   Let's give the web server a few seconds to get going before trying to load Ocelot home page. & ^
 echo.   Press any key to skip this step. & ^
 echo.   If page doesn't load right away once open in browser, simply press F5 to refresh page.
 timeout 10
 echo.
-start /max http://%ip%:5000/
+start /max https://%ip%:5000/
 stop

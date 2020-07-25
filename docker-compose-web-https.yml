@@ -9,7 +9,7 @@ services:
     mem_limit: 200000000
     memswap_limit: 300000000
     mem_reservation: 50m
-    command: [/bin/bash, start_webapp_http.sh]
+    command: [/bin/bash, start_webapp_https.sh]
     env_file:
       - env.env
     environment:

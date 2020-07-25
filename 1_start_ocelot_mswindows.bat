@@ -29,7 +29,7 @@ timeout 60
 echo. & ^
 echo.   Running Docker build. & ^
 echo.
-docker-compose build
+docker-compose -f docker-compose.yml build
 echo. & ^
 echo.   Stopping Ocelot services if currently running. & ^
 echo.
@@ -37,7 +37,7 @@ docker-compose stop
 echo. & ^
 echo.   Starting Ocelot. & ^
 echo.
-docker-compose up -d --remove-orphans
+docker-compose -f docker-compose.yml up -d --remove-orphans
 echo. & ^
 echo.   Let's give the web server a few seconds to get going before trying to load Ocelot home page. & ^
 echo.   Press any key to skip this step. & ^
