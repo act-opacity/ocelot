@@ -72,6 +72,58 @@ def get_account_details(account_handle="", handle_name=""):
         return False
 
 ''' start file actions '''
+@app.task(name="primary.file_action_dispatch")
+def file_action_dispatch(**kwargs):
+    # describe file actions
+    file_action_map = {
+        'fa_download_file': "Downloading a file",
+        'fa_upload_file':   "Uploading a file",
+        'fa_delete_file':   "Deleting a file",
+        'fa_move_file':     "Moving a file",
+        'fa_rename_file':   "Renaming a file"
+        }
+
+    # first verify dirs exist or create them before starting any upload task for this batch
+    # dirs are all directories that contain selected files
+    if kwargs["selected_action"] in ['fa_upload_file', 'fa_move_file']:
+        for dir in kwargs["list_of_directories"]:
+            if dir and dir not in ['/']:
+                app.signature("metadata.create_directory_local_and_remote_combined", 
+                    kwargs={"account_handle": kwargs["account_handle"], "remote_path": dir}).delay().get()
+    
+    if kwargs["selected_action"] in ['fa_move_file']:
+        app.signature("metadata.create_directory_local_and_remote_combined", 
+            kwargs={"account_handle": kwargs["account_handle"], "remote_path": kwargs["moveto_directory"]}).delay().get()
+    
+    dispatch = {
+        "fa_download_file": "download.download_file",
+        "fa_upload_file":   "upload.upload_file",
+        "fa_delete_file":   "metadata.delete_file",
+        "fa_move_file":     "metadata.move_file",
+        "fa_rename_file":   "metadata.rename_file"
+    }
+
+    # separate task for each file
+    for file in kwargs["list_of_filedata"]:
+        kwargs = {
+                "File_Action":      file_action_map[kwargs["selected_action"]],
+                "file_name":        file[0],
+                "local_path":       get_local_path(kwargs["account_handle"], file[1]),
+                "remote_path":      file[1],
+                "account_handle":   kwargs["account_handle"],
+                "file_handle":      file[2],
+                "selected_action":  kwargs["selected_action"],
+                "delete_storage":   kwargs["delete_storage"],
+                "delete_version":   kwargs["delete_version"],
+                "rename_value":     kwargs["rename_value"],
+                "moveto_directory": kwargs["moveto_directory"]
+        }
+
+        if dispatch.get(kwargs["selected_action"]):
+            app.signature(dispatch[kwargs["selected_action"]], 
+                kwargs=kwargs).delay()
+    return True
+
 @app.task(name="metadata.move_file")
 def move_file(**kwargs):
     # move remote file
@@ -105,12 +157,15 @@ def download_file(**kwargs):
 @app.task(name="upload.upload_file")
 def upload_file(**kwargs):
     account = Opacity.Opacity(kwargs["account_handle"])
-    handle_hex = account.upload(kwargs["file_name"], kwargs["local_path"], kwargs["remote_path"])
-    # add file to folder metadata
-    app.signature("metadata.add_uploaded_file_to_folder_metadata", 
-        kwargs={'account_handle': kwargs["account_handle"], 'file_name': kwargs["file_name"], 
-            'local_path': kwargs["local_path"], 'remote_path': kwargs["remote_path"],
-            'handle_hex': handle_hex}).delay()
+    if os.path.isfile(os.path.join(kwargs["local_path"], kwargs["file_name"])):
+        handle_hex = account.upload(kwargs["file_name"], kwargs["local_path"], kwargs["remote_path"])
+        # add file to folder metadata
+        app.signature("metadata.add_uploaded_file_to_folder_metadata", 
+            kwargs={'account_handle': kwargs["account_handle"], 'file_name': kwargs["file_name"], 
+                'local_path': kwargs["local_path"], 'remote_path': kwargs["remote_path"],
+                'handle_hex': handle_hex}).delay()
+    else:
+        print("Local file doesn't exist. Skipping.")
     return True
 
 @app.task(name="metadata.add_uploaded_file_to_folder_metadata")
@@ -221,6 +276,34 @@ def delete_file_metadata(**kwargs):
 ''' end file actions '''
 
 ''' start folder actions '''
+@app.task(name="primary.folder_action_dispatch")
+def folder_action_dispatch(**kwargs):
+    # first verify dirs exist for tasks that rely on them
+    dirs =  [
+                kwargs["create_folder_parent_dir"],
+                os.path.join(kwargs["create_folder_parent_dir"], kwargs["create_folder_new_name"]),
+                kwargs["movefrom_folder"],
+                kwargs["moveto_folder"],
+                kwargs["rename_folder_path"]
+            ]
+
+    for dir in dirs:
+        if dir and dir not in ['/']:
+            app.signature("metadata.create_directory_local_and_remote_combined", 
+                kwargs={"account_handle": kwargs["account_handle"], "remote_path": dir}).delay().get()
+
+    dispatch = {
+        'da_delete_folder': "metadata.delete_folder",
+        'da_move_folder':   "metadata.move_folder",
+        'da_rename_folder': "metadata.rename_folder"
+    }
+
+    # now dispatch
+    if dispatch.get(kwargs["selected"]):
+        app.signature(dispatch[kwargs["selected"]], 
+            kwargs=kwargs).delay()
+    return True
+
 ''' start delete folder action '''
 @app.task(name="metadata.delete_folder")
 def delete_folder(**kwargs):

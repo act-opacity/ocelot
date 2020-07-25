@@ -197,12 +197,13 @@ def file_action():
 
     # describe file actions
     file_action_map = {
-        'fa_download_file': "Downloading a file",
-        'fa_upload_file':   "Uploading a file",
-        'fa_delete_file':   "Deleting a file",
-        'fa_move_file':     "Moving a file",
+        'fa_download_file': "Downloading one or more files",
+        'fa_upload_file':   "Uploading one or more files",
+        'fa_delete_file':   "Deleting one or more files",
+        'fa_move_file':     "Moving one or more files",
         'fa_rename_file':   "Renaming a file"
         }
+        
     selected_action = request.json["selected_action"]
     delete_version = request.json["delete_version"]
     delete_storage = request.json["delete_storage"]
@@ -210,46 +211,20 @@ def file_action():
     list_of_directories = request.json["array_of_directories"]
     list_of_filedata = request.json["array_of_filedata"]
     moveto_directory = request.json["moveto_directory"]
-
-    # first verify dirs exist or create them before starting any upload task for this batch
-    # dirs are all directories that contain selected files
-    if selected_action in ['fa_upload_file', 'fa_move_file']:
-        for dir in list_of_directories:
-            celery.signature("metadata.create_directory_local_and_remote_combined", 
-                kwargs={"account_handle": account_handle, "remote_path": dir}).delay().get()
     
-    if selected_action in ['fa_move_file']:
-        celery.signature("metadata.create_directory_local_and_remote_combined", 
-            kwargs={"account_handle": account_handle, "remote_path": moveto_directory}).delay().get()
-    
-    dispatch = {
-        "fa_download_file": "download.download_file",
-        "fa_upload_file":   "upload.upload_file",
-        "fa_delete_file":   "metadata.delete_file",
-        "fa_move_file":     "metadata.move_file",
-        "fa_rename_file":   "metadata.rename_file"
-    }
+    kwargs = {
+            "list_of_filedata":     list_of_filedata,
+            "list_of_directories":  list_of_directories,
+            "account_handle":       account_handle,
+            "selected_action":      selected_action,
+            "delete_storage":       delete_storage,
+            "delete_version":       delete_version,
+            "rename_value":         rename_value,
+            "moveto_directory":     moveto_directory
+    }    
 
-    for file in list_of_filedata:
-        _kwargs = {
-                "File_Action":      file_action_map[selected_action],
-                "file_name":        file[0],
-                "local_path":       get_local_path(account_handle, file[1]),
-                "remote_path":      file[1],
-                "account_handle":   account_handle,
-                "file_handle":      file[2],
-                "selected":         selected_action,
-                "delete_storage":   delete_storage,
-                "delete_version":   delete_version,
-                "rename_value":     rename_value,
-                "moveto_directory": moveto_directory
-        }
-
-        if dispatch.get(_kwargs["selected"]):
-            celery.signature(dispatch[_kwargs["selected"]], 
-                kwargs=_kwargs).delay()
-    
-    return "Request dispatched successfully"
+    celery.signature("primary.file_action_dispatch", kwargs=kwargs).delay()    
+    return f"Request dispatched successfully: {file_action_map[selected_action]}"
 
 @app.route('/folder/action', methods=['POST'])
 def folder_action():
@@ -265,7 +240,7 @@ def folder_action():
         'da_rename_folder': "Renaming a folder"
         }
 
-    _kwargs = {
+    kwargs = {
         "Folder_Action":            folder_action_map[request.json["selected_action"]],
         "selected":                 request.json["selected_action"],
         "create_folder_parent_dir": request.json["parent_dir_of_create_folder"],
@@ -279,26 +254,5 @@ def folder_action():
         "account_handle":           account_handle
     }
 
-    # first verify dirs exist for tasks that rely on them
-    dirs =  [   _kwargs["create_folder_parent_dir"],
-                os.path.join(_kwargs["create_folder_parent_dir"], _kwargs["create_folder_new_name"]),
-                _kwargs["movefrom_folder"],
-                _kwargs["moveto_folder"],
-                _kwargs["rename_folder_path"]
-            ]
-
-    for dir in dirs:
-        celery.signature("metadata.create_directory_local_and_remote_combined", 
-            kwargs={"account_handle": account_handle, "remote_path": dir}).delay().get()
-
-    dispatch = {
-        'da_delete_folder': "metadata.delete_folder",
-        'da_move_folder':   "metadata.move_folder",
-        'da_rename_folder': "metadata.rename_folder"
-    }
-
-    if dispatch.get(_kwargs["selected"]):
-        celery.signature(dispatch[_kwargs["selected"]], 
-            kwargs=_kwargs).delay()
-    
+    celery.signature("primary.folder_action_dispatch", kwargs=kwargs).delay()
     return "Request dispatched successfully"
