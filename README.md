@@ -16,6 +16,9 @@ Ocelot featured capabilities:
 
 ## Install Ocelot
 
+#### Installation Video Tutorial
+Here is a [4 minute video hosted on Opacity Storage](https://www.opacity.io/share#handle=a8b6c931e051b444d2776a39e8a5258f0b4bf38e69b29a5df734b25139633efc567383b3258b20f621fc4faed6039eefa6a304bbb7817f7d260326a9b967f169) to demonstrate how to install Ocelot.
+
 #### Installation Dependencies: Docker
 The Docker Engine and the Docker CLI client are required to be installed on your machine (Windows, Mac, Linux).
 
