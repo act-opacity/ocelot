@@ -1,4 +1,6 @@
 # Ocelot, an Opacity Storage Client Application
+
+#### Overview
 Ocelot is a containerized web application that interfaces with the [Opacity Storage](https://www.opacity.io/) web services. Ocelot is client software meant to be run on your local machine.
 
 Since Ocelot uses Docker to run, it can be run on any device that supports Docker, including Windows, Macintosh (Mac) and Linux.
@@ -14,10 +16,17 @@ Ocelot featured capabilities:
 * Review file version history and access previous file versions
 * Quickly open a file's share link to share or review its contents
 
+#### Getting Started Video Tutorials
+**Note:** all video tutorials are hosted on Opacity Storage and can be previewed in your browser.
+
+1. **How to use Ocelot: Video 1:** [Basic Demo](https://www.opacity.io/share#handle=559fb992f07b0bbd141d3bf29ed684398b57615237ff111d7770b7644d435b8270297feade3212afe9ad60b0806351048a0ade76ce34d78bfd1f4ea29310f010) ~13 minutes.
+
+2. **How to use Ocelot: Video 2:** Advanced Demo, which includes technical discussion and configuration options (coming soon)
+
 ## Install Ocelot
 
 #### Installation Video Tutorial
-Here is a [4 minute video hosted on Opacity Storage](https://www.opacity.io/share#handle=a8b6c931e051b444d2776a39e8a5258f0b4bf38e69b29a5df734b25139633efc567383b3258b20f621fc4faed6039eefa6a304bbb7817f7d260326a9b967f169) to demonstrate how to install Ocelot.
+* [4 minute video showing how to install and run Ocelot](https://www.opacity.io/share#handle=a8b6c931e051b444d2776a39e8a5258f0b4bf38e69b29a5df734b25139633efc567383b3258b20f621fc4faed6039eefa6a304bbb7817f7d260326a9b967f169)
 
 #### Installation Dependencies: Docker
 The Docker Engine and the Docker CLI client are required to be installed on your machine (Windows, Mac, Linux).
