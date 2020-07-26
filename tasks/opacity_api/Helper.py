@@ -24,9 +24,9 @@ class Helper:
         blockSize = fileMetaOptions.blockSize
         partSize = fileMetaOptions.partSize
         chunkSize = blockSize + Constants.BLOCK_OVERHEAD
-        chunkCount = int(uploadSize / chunkSize)
-        chunksPerPart = int(partSize / chunkSize) + 1
-        endIndex = int(chunkCount / chunksPerPart) + 1
+        chunkCount = math.ceil(uploadSize / chunkSize)
+        chunksPerPart = math.ceil(partSize / chunkSize)
+        endIndex = math.ceil(chunkCount / chunksPerPart)
         return endIndex
 
     @staticmethod
