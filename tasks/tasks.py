@@ -170,21 +170,32 @@ def upload_file(**kwargs):
 
 @app.task(name="metadata.add_uploaded_file_to_folder_metadata")
 def add_uploaded_file_to_folder_metadata(**kwargs):
-    account = Opacity.Opacity(kwargs["account_handle"])
-    file_abs_path = os.path.join(kwargs["local_path"], kwargs["file_name"])
-    fileInfo = FolderMetaFile()
-    fileInfo.name = os.path.basename(file_abs_path)
-    fileInfo.created = int(os.path.getctime(file_abs_path) * 1000)
-    fileInfo.modified = int(os.path.getmtime(file_abs_path) * 1000)
-    fileInfo.versions.append(
-        FolderMetaFileVersion(
-            size=os.path.getsize(file_abs_path),
-            handle=kwargs['handle_hex'],
-            modified=fileInfo.modified,
-            created=fileInfo.created
-        )
-    )
-    account.AddFileToFolderMetaData(kwargs["remote_path"], fileInfo, isFile=True)
+    while True:
+        try:
+            account = Opacity.Opacity(kwargs["account_handle"])
+            file_abs_path = os.path.join(kwargs["local_path"], kwargs["file_name"])
+            fileInfo = FolderMetaFile()
+            fileInfo.name = os.path.basename(file_abs_path)
+            fileInfo.created = int(os.path.getctime(file_abs_path) * 1000)
+            fileInfo.modified = int(os.path.getmtime(file_abs_path) * 1000)
+            fileInfo.versions.append(
+                FolderMetaFileVersion(
+                    size=os.path.getsize(file_abs_path),
+                    handle=kwargs['handle_hex'],
+                    modified=fileInfo.modified,
+                    created=fileInfo.created
+                )
+            )
+            account.AddFileToFolderMetaData(kwargs["remote_path"], fileInfo, isFile=True)
+        except ConnectionError:
+            # if connection error (we lost network access), go back to start of while
+            # we want to do this continually since we know file object has already
+            # uploaded successfully. If we don't update this metadata, then the file
+            # object will exist but be inaccessible
+            time.sleep(10) # 10 seconds
+            continue
+        # if successful, break out of while
+        break
     return True
 
 ''' start delete file action '''
