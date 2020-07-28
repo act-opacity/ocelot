@@ -250,8 +250,11 @@ class Opacity:
         payload = self.signPayloadDict(metaReqDictJson)
         payloadJson = Helper.GetJson(payload)
 
-        with requests.Session() as s:
-            response = s.post(self._baseUrl + "metadata/set", data=payloadJson)
+        try:
+            with requests.Session() as s:
+                response = s.post(self._baseUrl + "metadata/set", data=payloadJson)
+        except:
+            raise
 
         return response
 
