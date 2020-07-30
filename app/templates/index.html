@@ -702,37 +702,37 @@
                             <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
                         </div>
                         <div class="modal-body mx-4" style="overflow-x:auto">
-                            <h6>What action do you want to perform on these files?</h6>
-                            <div class="btn-toolbar" role="toolbar" aria-label="File actions">
-                                <div class="col-sm-12 col-md-12 col-lg-12 my-2">
-                                    <select class="form-control" id="selectedRowActions">
-                                        <option value="" disabled selected>Select File Action</option>
-                                        <option id="fa_download_file">Download/Sync to local storage</option>
-                                        <option id="fa_upload_file">Upload/Sync to Opacity</option>
-                                        <option id="fa_delete_file" value="deleteOpts">Delete file(s)</option>
-                                        <option id="fa_move_file" value="moveOpts">Move file(s) to different folder</option>
-                                        <option id="fa_rename_file" value="renameOpts">Rename a single file</option>
-                                    </select>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteOpts">
-                                    <select class="form-control mb-2" id="deleteActionsFileVersions">
-                                        <option value="" disabled selected>Select a Specific Delete Action</option>
-                                        <option id="fa_delete_current_file_version">Delete only current file version</option>
-                                        <option id="fa_delete_all_file_versions">Delete file(s) and all file versions</option>
-                                    </select>
-                                    <select class="form-control mb-2" id="deleteActionsStorageLocation">
-                                        <option value="" disabled selected>Select from which Storage Location to Delete File</option>
-                                        <option id="fa_delete_remote">Delete from Opacity storage only</option>
-                                        <option id="fa_delete_local">Delete from local storage only</option>
-                                        <option id="fa_delete_remote_and_local">Delete from both Opacity and local storage</option>
-                                    </select>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveOpts">
-                                    <select class="form-control mb-2" id="moveFileToDirLocation">
-                                    </select>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12 my-2" id="renameOpts">
-                                    <form>
+                            <form class="prevent_enter_submit">
+                                <h6>What action do you want to perform on these files?</h6>
+                                <div class="btn-toolbar" role="toolbar" aria-label="File actions">
+                                    <div class="col-sm-12 col-md-12 col-lg-12 my-2">
+                                        <select class="form-control" id="selectedRowActions">
+                                            <option value="" disabled selected>Select File Action</option>
+                                            <option id="fa_download_file">Download/Sync to local storage</option>
+                                            <option id="fa_upload_file">Upload/Sync to Opacity</option>
+                                            <option id="fa_delete_file" value="deleteOpts">Delete file(s)</option>
+                                            <option id="fa_move_file" value="moveOpts">Move file(s) to different folder</option>
+                                            <option id="fa_rename_file" value="renameOpts">Rename a single file</option>
+                                        </select>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteOpts">
+                                        <select class="form-control mb-2" id="deleteActionsFileVersions">
+                                            <option value="" disabled selected>Select a Specific Delete Action</option>
+                                            <option id="fa_delete_current_file_version">Delete only current file version</option>
+                                            <option id="fa_delete_all_file_versions">Delete file(s) and all file versions</option>
+                                        </select>
+                                        <select class="form-control mb-2" id="deleteActionsStorageLocation">
+                                            <option value="" disabled selected>Select from which Storage Location to Delete File</option>
+                                            <option id="fa_delete_remote">Delete from Opacity storage only</option>
+                                            <option id="fa_delete_local">Delete from local storage only</option>
+                                            <option id="fa_delete_remote_and_local">Delete from both Opacity and local storage</option>
+                                        </select>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveOpts">
+                                        <select class="form-control mb-2" id="moveFileToDirLocation">
+                                        </select>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12 my-2" id="renameOpts">
                                         <div class="form-group">
                                             <label for="renameFileInput">Rename file</label>
                                             <input type="text" class="form-control" id="renameFileInput" aria-describedby="renameFile" placeholder="Provide New File Name Including File Extension (e.g. movie.mp4)">
@@ -741,9 +741,9 @@
                                                 Provide New File Name Including File Extension (e.g. movie.mp4)
                                             </small>
                                         </div>
-                                    </form>
+                                    </div>
                                 </div>
-                            </div>
+                            </form>
                             <div style="height:300px; overflow-y: scroll;">
                                 <table id="myTableSelections" class="table table-sm table-hover table-bordered display" style="width:100%">
                                     <thead class="text-white bg-dark">
@@ -783,70 +783,72 @@
                             <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span></button>
                         </div>
                         <div class="modal-body mx-4">
-                            <h6>What folder action do you want to perform?</h6>
-                            <div class="btn-toolbar" role="toolbar" aria-label="Folder actions">
-                                <div class="col-sm-12 col-md-12 col-lg-12 my-2">
-                                    <select class="form-control" id="folderActions">
-                                        <option value="" disabled selected>Select folder action</option>
-                                        <option id="da_create_folder" value="createFolderOpts">Create a folder</option>
-                                        <option id="da_rename_folder" value="renameFolderOpts">Rename a folder</option>
-                                        <option id="da_delete_folder" value="deleteFolderOpts">Delete a folder</option>
-                                        <option id="da_move_folder" value="moveFolderOpts">Move a folder</option>
-                                    </select>
+                            <form class="prevent_enter_submit">                        
+                                <h6>What folder action do you want to perform?</h6>
+                                <div class="btn-toolbar" role="toolbar" aria-label="Folder actions">
+                                    <div class="col-sm-12 col-md-12 col-lg-12 my-2">
+                                        <select class="form-control" id="folderActions">
+                                            <option value="" disabled selected>Select folder action</option>
+                                            <option id="da_create_folder" value="createFolderOpts">Create a folder</option>
+                                            <option id="da_rename_folder" value="renameFolderOpts">Rename a folder</option>
+                                            <option id="da_delete_folder" value="deleteFolderOpts">Delete a folder</option>
+                                            <option id="da_move_folder" value="moveFolderOpts">Move a folder</option>
+                                        </select>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="createFolderOpts">
+                                        <form>
+                                            <div class="form-group">
+                                                <select class="form-control mb-2" id="createFolderSelection">
+                                                </select>
+                                                <input type="text" class="form-control" id="createFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
+                                                <small class="form-text text-muted">
+                                                    Avoid special characters/symbols in folder name to prevent unexpected results.
+                                                </small>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteFolderOpts">
+                                        <select class="form-control mb-2" id="deleteFolderSelection">
+                                        </select>
+                                        <select class="form-control mb-2" id="deleteFolderStorageLocation">
+                                            <option value="" disabled selected>Select from which Storage Location to Delete Folder</option>
+                                            <option id="da_delete_remote">Delete from Opacity storage only</option>
+                                            <option id="da_delete_local">Delete from local storage only</option>
+                                            <option id="da_delete_remote_and_local">Delete from both Opacity and local storage</option>
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            WARNING! Deleting a folder will delete all files within it, all subfolders within it, 
+                                            and all files within those subfolders. If deleting a lot of files from Opacity Storage, 
+                                            expect this action to take some time to complete. e.g. Opacity broker will delete about 
+                                            50 files per minute.
+                                        </small>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="renameFolderOpts">
+                                        <form>
+                                            <div class="form-group">
+                                                <select class="form-control mb-2" id="renameFolderSelection">
+                                                </select>
+                                                <input type="text" class="form-control" id="renameFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
+                                                <small class="form-text text-muted">
+                                                    Avoid special characters/symbols in folder name to prevent unexpected results. 
+                                                    WARNING! If folder with same name exists in destination, its contents will be overwritten 
+                                                    on your local file system and on Opacity.
+                                                </small>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveFolderOpts">
+                                        <select class="form-control mb-2" id="moveFolderFromSelection">
+                                        </select>
+                                        <select class="form-control mb-2" id="moveFolderToSelection">
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            WARNING! If folder with same name exists in destination, its contents will be overwritten on your local file system, 
+                                            but on Opacity its contents will be retained and merged with the moved folder's contents.
+                                        </small>
+                                    </div>
                                 </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="createFolderOpts">
-                                    <form>
-                                        <div class="form-group">
-                                            <select class="form-control mb-2" id="createFolderSelection">
-                                            </select>
-                                            <input type="text" class="form-control" id="createFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
-                                            <small class="form-text text-muted">
-                                                Avoid special characters/symbols in folder name to prevent unexpected results.
-                                            </small>
-                                        </div>
-                                    </form>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="deleteFolderOpts">
-                                    <select class="form-control mb-2" id="deleteFolderSelection">
-                                    </select>
-                                    <select class="form-control mb-2" id="deleteFolderStorageLocation">
-                                        <option value="" disabled selected>Select from which Storage Location to Delete Folder</option>
-                                        <option id="da_delete_remote">Delete from Opacity storage only</option>
-                                        <option id="da_delete_local">Delete from local storage only</option>
-                                        <option id="da_delete_remote_and_local">Delete from both Opacity and local storage</option>
-                                    </select>
-                                    <small class="form-text text-muted">
-                                        WARNING! Deleting a folder will delete all files within it, all subfolders within it, 
-                                        and all files within those subfolders. If deleting a lot of files from Opacity Storage, 
-                                        expect this action to take some time to complete. e.g. Opacity broker will delete about 
-                                        50 files per minute.
-                                    </small>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="renameFolderOpts">
-                                    <form>
-                                        <div class="form-group">
-                                            <select class="form-control mb-2" id="renameFolderSelection">
-                                            </select>
-                                            <input type="text" class="form-control" id="renameFolderInput" aria-describedby="renameFolder" placeholder="Provide New Folder Name (e.g. pictures)">
-                                            <small class="form-text text-muted">
-                                                Avoid special characters/symbols in folder name to prevent unexpected results. 
-                                                WARNING! If folder with same name exists in destination, its contents will be overwritten 
-                                                on your local file system and on Opacity.
-                                            </small>
-                                        </div>
-                                    </form>
-                                </div>
-                                <div class="collapse col-sm-12 col-md-12 col-lg-12" id="moveFolderOpts">
-                                    <select class="form-control mb-2" id="moveFolderFromSelection">
-                                    </select>
-                                    <select class="form-control mb-2" id="moveFolderToSelection">
-                                    </select>
-                                    <small class="form-text text-muted">
-                                        WARNING! If folder with same name exists in destination, its contents will be overwritten on your local file system, 
-                                        but on Opacity its contents will be retained and merged with the moved folder's contents.
-                                    </small>
-                                </div>
-                            </div>
+                            </form>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-sm btn-primary" onclick="return c_processFolderAction();">Yes, do it!</button>
@@ -1576,6 +1578,13 @@
             }
         });
         // END--file version history modal
+        
+        $(".prevent_enter_submit").keypress(function(e){
+            if(e.keyCode == 13) {
+                e.preventDefault();
+                return false;
+            }
+        })
 
         // END other functions
     </script>
