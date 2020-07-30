@@ -1,12 +1,15 @@
-import os, sys, json, shutil, time, datetime, sqlalchemy, requests
+import os, sys, json, shutil, time, datetime, base64, math
+import sqlalchemy, requests, mimetypes, itertools
 from pathlib import Path, PurePath
 from celery import Celery, signature
 from celery.utils.log import get_task_logger
 from sqlalchemy import create_engine
 from tasks.opacity_api import *
-from tasks.opacity_api import Constants
+from tasks.opacity_api.Constants import Constants
+from tasks.opacity_api.AesGcm256 import AesGcm256
 from tasks.opacity_api import Opacity
 from tasks.opacity_api.Helper import Helper
+from tasks.opacity_api.FileMetaData import FileMetaData
 from tasks.opacity_api.FolderMetaData import FolderMetaData, FolderMetaFolder, FolderMetaFile, FolderMetaFileVersion
 from tasks.functions import get_short_handle, get_file_extension, get_account_dir_path, \
     get_account_metadata_dir_path, size_human_readable, date_human_readable, create_directory, get_local_path
@@ -15,7 +18,7 @@ from tasks.functions import get_short_handle, get_file_extension, get_account_di
 engine = create_engine(f"sqlite:///{os.environ.get('APPDATA')}/opacity.sqlite", echo = True)
 
 app = Celery()
-app.conf.task_routes = json.loads(os.environ.get("CELERY_ROUTES"))
+app.config_from_object('tasks.celeryconfig')
 
 logger = get_task_logger(__name__)
 
@@ -24,7 +27,7 @@ def get_account_details(account_handle="", handle_name=""):
     try:
         # retrieve from Opacity
         account = Opacity.Opacity(account_handle)
-        account_status = account._status
+        account_status = account.checkAccountStatus()
 
         c = datetime.datetime.strptime(account_status.account.createdAt, '%Y-%m-%dT%H:%M:%SZ')
         e = datetime.datetime.strptime(account_status.account.expirationDate, '%Y-%m-%dT%H:%M:%SZ')
@@ -122,6 +125,7 @@ def file_action_dispatch(**kwargs):
         if dispatch.get(kwargs["selected_action"]):
             app.signature(dispatch[kwargs["selected_action"]], 
                 kwargs=kwargs).delay()
+            time.sleep(1)
     return True
 
 @app.task(name="metadata.move_file")
@@ -156,9 +160,18 @@ def download_file(**kwargs):
 
 @app.task(name="upload.upload_file")
 def upload_file(**kwargs):
-    account = Opacity.Opacity(kwargs["account_handle"])
     if os.path.isfile(os.path.join(kwargs["local_path"], kwargs["file_name"])):
-        handle_hex = account.upload(kwargs["file_name"], kwargs["local_path"], kwargs["remote_path"])
+        task = app.signature("primary.upload_file_object", 
+            kwargs={'account_handle': kwargs["account_handle"], 'file_name': kwargs["file_name"], 
+                'local_path': kwargs["local_path"], 'remote_path': kwargs["remote_path"]}).apply_async()
+        
+        while not task.ready():
+            #  if task is ready, should be either successful or failed
+            time.sleep(1)
+        
+        handle_hex = task.info
+        print(f"Returned handle hex for file {os.path.join(kwargs['local_path'], kwargs['file_name'])} is: {handle_hex}")
+    
         # add file to folder metadata
         app.signature("metadata.add_uploaded_file_to_folder_metadata", 
             kwargs={'account_handle': kwargs["account_handle"], 'file_name': kwargs["file_name"], 
@@ -167,6 +180,205 @@ def upload_file(**kwargs):
     else:
         print("Local file doesn't exist. Skipping.")
     return True
+
+@app.task(bind=True, name="primary.upload_file_object")
+def upload_file_object(self, **kwargs):
+    account = Opacity.Opacity(kwargs["account_handle"])
+    file_path = os.path.join(kwargs["local_path"], kwargs["file_name"])
+    folder = kwargs["remote_path"]
+    #def uploadFile(self, file_path, folder):
+    if not os.path.isfile(file_path):
+        print(f"This file doesn't exist on local file system: {file_path}")
+        return
+    fd = file_metadata_for_upload(file_path)
+    print("Starting file object upload process for: {}".format(fd["name"]))
+    metaData = FileMetaData(fd)
+    uploadSize = Helper.GetUploadSize(fd["size"])
+    endIndex = Helper.GetEndIndex(uploadSize, metaData.p)
+    file_handle = Helper.GenerateFileKeys()
+    file_handle_string_repr =  base64.b64encode(file_handle).decode("utf-8")
+    hashBytes = file_handle[0:32]
+    keyBytes = file_handle[32:]
+    metaDataJson = Helper.GetJson(metaData.getDict())
+    encryptedMetaData = AesGcm256.encryptString(metaDataJson, keyBytes)
+    handleHex = file_handle.hex()
+    fileId = hashBytes.hex()
+
+    requestBody = dict()
+    requestBody["fileHandle"] = fileId
+    requestBody["fileSizeInByte"] = uploadSize
+    requestBody["endIndex"] = endIndex
+    requestBodyJson = Helper.GetJson(requestBody)
+    payload = account.SignPayloadForm(requestBodyJson, {"metadata": encryptedMetaData})
+
+    # initialize upload only
+    with requests.Session() as s:
+        response = s.post(account._baseUrl + "init-upload", files=payload)
+
+    if response.status_code != 200:
+        raise Exception("Error during init-upload\n{}".format(response.content.decode()))
+
+    ''' Uploading Parts '''
+    # start_time = time.time()
+    running_tasks = []
+    # signature_bool determines if file will run on separate worker or not
+    # use for larger files as determined by FILE_PART_THRESHOLD config in env.env file
+    signature_bool=False
+    
+    #integer value
+    FILE_PART_THRESHOLD = int(os.environ.get('FILE_PART_UPLOAD_THRESHOLD_SEPARATE_WORKER'))
+    if endIndex > FILE_PART_THRESHOLD:
+        signature_bool=True
+    args = [(kwargs["account_handle"], file_handle_string_repr, file_path, index, endIndex, signature_bool) for index in range(endIndex)]
+    # map function to multiple sets of arguments
+    tasks = itertools.starmap(wrap_celery_file_part_upload_task, args)
+    # iterate function calls
+    for task in tasks:
+        # task will execute and return a tuple that contains an
+        # AsyncObject (task id) and the loop index (i.e. for index in range endIndex)
+        task_tuple = task
+        running_tasks.append(task_tuple)
+        time.sleep(1)
+        if task:
+            # won't execute for tasks executed directly as functions (not using celery task)
+            self.update_state(state='UPLOADING')
+        
+    # poll celery for task completion
+    # but only if function was executed as a separate task on another worker
+    if signature_bool:
+        while running_tasks:
+            task_id, part_index = running_tasks.pop()
+            # print(f"Task {task_id} is {task_id.state}")
+            if not task_id.ready():
+                #  if task is ready, should be either successful or failed
+                running_tasks.insert(0, (task_id, part_index))
+                time.sleep(0.5)
+            elif task_id.state == 'FAILURE':
+                # try again
+                print(f"File part upload returned with FAILURE status. Retrying part number: {part_index + 1}")
+                response = wrap_celery_file_part_upload_task(file_handle_string_repr, file_path, part_index, endIndex)
+                running_tasks.insert(0, response)
+    
+    # print("--- %s seconds ---" % (time.time() - start_time))
+    ''' Verify Upload & Retry missing parts '''
+    
+    requestBody = dict()
+    requestBody["fileHandle"] = fileId
+    requestBodyJson = Helper.GetJson(requestBody)
+    payload = account.signPayloadDict(requestBodyJson)
+    payloadJson = Helper.GetJson(payload)
+
+    with requests.Session() as s:
+        response = s.post(account._baseUrl + "upload-status", data=payloadJson)
+
+    content = json.loads(response.content.decode())
+    print(f"Verifing Upload for: {file_path}. Status is: {content['status']}")
+    if content["status"] != 'File is uploaded':
+        if content["status"] == 'chunks missing':
+            missingParts = content["missingIndexes"]
+            while len(missingParts) > 0:
+                amount = content["endIndex"]
+                for missingPart in missingParts:
+                    print("Trying to re-upload part {} out of {}".format(missingPart, amount))
+                    wrap_celery_file_part_upload_task(kwargs["account_handle"], 
+                        file_handle_string_repr, file_path, missingPart-1, endIndex)
+                with requests.Session() as s:
+                    response = s.post(account._baseUrl + "upload-status", data=payloadJson)
+                content = json.loads(response.content.decode())
+                if content["status"] == "File is uploaded":
+                    print(f"Verify Upload after a retry. Status is: {content['status']}")
+                    break
+                else:
+                    missingParts = content["missingIndexes"]
+        else:
+            raise AssertionError("Unknown status of upload-status")
+    
+    return handleHex
+
+def wrap_celery_file_part_upload_task(account_handle, file_handle_string_repr, file_path, current_index, end_index, signature_bool=False):
+    kwargs={'account_handle': account_handle, 'file_handle': file_handle_string_repr, 
+                    'file_path': file_path, 'current_index': current_index, 
+                    'end_index': end_index}
+    task = ""
+    # use dedicated uploads-fileparts worker if larger file
+    if signature_bool:
+        task = app.signature("uploads-fileparts.upload_file_part", 
+                kwargs=kwargs).delay()
+    else:
+        # otherwise, run synchronously on same worker
+        upload_file_part(**kwargs)
+    return task, current_index
+
+def file_metadata_for_upload(file_path):
+    fd = dict()
+    fd["fullName"] = os.path.normpath(file_path)
+    fd["name"] = os.path.basename(file_path)
+    fd["size"] = os.path.getsize(file_path)
+    fd["type"] = mimetypes.guess_type(file_path)[0]
+    return fd
+
+@app.task(name="uploads-fileparts.upload_file_part")
+def upload_file_part(**kwargs):
+    account = Opacity.Opacity(kwargs["account_handle"])
+    current_index = kwargs["current_index"]
+    end_index = kwargs["end_index"]
+    # convert file_handle back to bytes
+    file_handle = base64.b64decode(kwargs["file_handle"])
+    file_info = file_metadata_for_upload(kwargs["file_path"])
+    metadata = FileMetaData(file_info)
+    
+    print(f"{file_info['name']}, {file_info['size']}: uploading part {current_index + 1} of {end_index}")
+    # start_time = time.time()
+    try_count = 0
+    while True:
+        try:
+            hashBytes = file_handle[0:32]
+            keyBytes = file_handle[32:]
+            fileId = hashBytes.hex()
+            partSize = metadata.p.partSize
+            rawpart = Helper.GetPartial(file_info, partSize, current_index)
+            numChunks = math.ceil(len(rawpart) / metadata.p.blockSize)
+            encryptedBlob = bytearray(0)
+
+            for chunkIndex in range(numChunks):
+                remaining = len(rawpart) - (chunkIndex * metadata.p.blockSize)
+                if (remaining <= 0):
+                    break
+
+                chunkSize = min(remaining, metadata.p.blockSize)
+                encryptedChunkSize = chunkSize + Constants.BLOCK_OVERHEAD
+                chunk = rawpart[chunkIndex * metadata.p.blockSize: chunkIndex * metadata.p.blockSize + chunkSize]
+                encryptedChunk = AesGcm256.encrypt(chunk, keyBytes)
+
+                if (encryptedChunkSize != len(encryptedChunk)):
+                    breakpoint()
+
+                encryptedBlob += encryptedChunk
+
+            requestBody = dict()
+            requestBody["fileHandle"] = fileId
+            requestBody["partIndex"] = current_index + 1
+            requestBody["endIndex"] = end_index
+            requestBodyJson = Helper.GetJson(requestBody)
+            payload = account.SignPayloadForm(requestBodyJson, {"chunkData": encryptedBlob})
+            print("POSTing")
+
+            with requests.Session() as s:
+                response = s.post(account._baseUrl + "upload", files=payload)
+
+        except Exception as e:
+            print("Failed upload of part {} out of {}\nError: {}".format(current_index + 1, end_index, e.args))
+            if {e.__class__.__name__} in ["ConnectionError"]:
+                try_count += 1
+                print (f"Error type is: {e.__class__.__name__}")
+                print("Detected Network Connection Problem!")
+                print(f"Trying again in 10 seconds and will keep retrying. This is attempt number: {try_count}")
+                time.sleep(10) # 10 seconds
+                continue
+        else:
+            break
+    return True
+        
 
 @app.task(name="metadata.add_uploaded_file_to_folder_metadata")
 def add_uploaded_file_to_folder_metadata(**kwargs):

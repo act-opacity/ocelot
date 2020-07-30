@@ -30,6 +30,7 @@ RUN venv/bin/pip3 install -r requirements_celeryworker.txt
 # use for local development
 COPY tasks tasks
 COPY common/functions.py tasks/functions.py
+COPY celeryconfig.py tasks/celeryconfig.py
 #RUN chown -R opacity:opacity ./data
 
 USER opacity

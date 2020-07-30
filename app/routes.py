@@ -8,7 +8,7 @@ from app.functions import get_short_handle, convert_js_bool_to_python, get_accou
 from celery import Celery, signature
 
 celery = Celery()
-celery.conf.task_routes = json.loads(os.environ.get("CELERY_ROUTES"))
+celery.config_from_object('app.celeryconfig')
 
 @app.route('/')
 @app.route('/index')

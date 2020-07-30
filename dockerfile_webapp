@@ -19,5 +19,6 @@ COPY common/functions.py app/functions.py
 COPY opacity_webapp.py opacity_webapp.py
 COPY start_webapp_http.sh start_webapp_http.sh
 COPY start_webapp_https.sh start_webapp_https.sh
+COPY celeryconfig.py app/celeryconfig.py
 
 USER opacity

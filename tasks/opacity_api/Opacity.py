@@ -32,7 +32,6 @@ class Opacity:
         chain_code_bytes = bytearray.fromhex(self._chainCode)
         new_key = bitcoinlib.keys.Key(import_key=private_key_bytes, is_private=True, compressed=True)
         self._masterKey = bitcoinlib.keys.HDKey(key=new_key.private_byte, chain=chain_code_bytes)
-        self._status = self.checkAccountStatus()
 
     def checkAccountStatus(self):
         requestBody = dict()
@@ -77,84 +76,6 @@ class Opacity:
 
         return newDict
 
-    def upload(self, fileName, localPath, remotePath):
-        # rely on client to call create directory task that waits to prevent duplicate metadata
-        handleHex = self.uploadFile(os.path.join(localPath, fileName), remotePath)
-        return handleHex
-
-    def uploadFile(self, filePath, folder):
-        if not os.path.isfile(filePath):
-            print(f"This file doesn't exist on local file system: {filePath}")
-            return
-        fd = dict()
-        fd["fullName"] = os.path.normpath(filePath)
-        fd["name"] = os.path.basename(filePath)
-        fd["size"] = os.path.getsize(filePath)
-        fd["type"] = mimetypes.guess_type(filePath)[0]
-
-        print("Uploading file: {}".format(fd["name"]))
-        metaData = FileMetaData(fd)
-        uploadSize = Helper.GetUploadSize(fd["size"])
-        endIndex = Helper.GetEndIndex(uploadSize, metaData.p)
-        handle = Helper.GenerateFileKeys()
-        hashBytes = handle[0:32]
-        keyBytes = handle[32:]
-        metaDataJson = Helper.GetJson(metaData.getDict())
-        encryptedMetaData = AesGcm256.encryptString(metaDataJson, keyBytes)
-        handleHex = handle.hex()
-        fileId = hashBytes.hex()
-
-        requestBody = dict()
-        requestBody["fileHandle"] = fileId
-        requestBody["fileSizeInByte"] = uploadSize
-        requestBody["endIndex"] = endIndex
-        requestBodyJson = Helper.GetJson(requestBody)
-        payload = self.SignPayloadForm(requestBodyJson, {"metadata": encryptedMetaData})
-
-        with requests.Session() as s:
-            response = s.post(self._baseUrl + "init-upload", files=payload)
-
-        if response.status_code != 200:
-            raise Exception("Error during init-upload\n{}".format(response.content.decode()))
-
-        ''' Uploading Parts '''
-
-        # start_time = time.time()
-        Parallel(n_jobs=8)(delayed(self.uploadPart)(fd, metaData, handle, index, endIndex) for index in range(endIndex))
-        # print("--- %s seconds ---" % (time.time() - start_time))
-
-        ''' Verify Upload & Retry missing parts '''
-        
-        requestBody = dict()
-        requestBody["fileHandle"] = fileId
-        requestBodyJson = Helper.GetJson(requestBody)
-        payload = self.signPayloadDict(requestBodyJson)
-        payloadJson = Helper.GetJson(payload)
-
-        with requests.Session() as s:
-            response = s.post(self._baseUrl + "upload-status", data=payloadJson)
-
-        content = json.loads(response.content.decode())
-        if content["status"] != 'File is uploaded':
-            if content["status"] == 'chunks missing':
-                missingParts = content["missingIndexes"]
-                while len(missingParts) > 0:
-                    amount = content["endIndex"]
-                    for missingPart in missingParts:
-                        print("Trying to re-upload part {} out of {}".format(missingPart, amount))
-                        self.uploadPart(fd, metaData, handle, missingPart-1, endIndex)
-                    with requests.Session() as s:
-                        response = s.post(self._baseUrl + "upload-status", data=payloadJson)
-                    content = json.loads(response.content.decode())
-                    if content["status"] == "File is uploaded":
-                        break
-                    else:
-                        missingParts = content["missingIndexes"]
-            else:
-                raise AssertionError("Unknown status of upload-status")
-        
-        return handleHex
-        
     def SignPayloadForm(self, requestBodyJson, extraPayload):
         # hash the payload
         msgBytes = bytearray(requestBodyJson, "utf-8")
@@ -180,49 +101,6 @@ class Opacity:
             newDict[payloadKey] = payloadValue
 
         return newDict
-
-    def uploadPart(self, fileInfo, metaData, handle, currentIndex, lastIndex):
-        print(f"{fileInfo['name']}, {fileInfo['size']}: uploading part {currentIndex + 1} of {lastIndex}")
-        # start_time = time.time()
-        try:
-            hashBytes = handle[0:32]
-            keyBytes = handle[32:]
-            fileId = hashBytes.hex()
-            partSize = metaData.p.partSize
-            rawpart = Helper.GetPartial(fileInfo, partSize, currentIndex)
-            numChunks = math.ceil(len(rawpart) / metaData.p.blockSize)
-            encryptedBlob = bytearray(0)
-
-            for chunkIndex in range(numChunks):
-                remaining = len(rawpart) - (chunkIndex * metaData.p.blockSize)
-                if (remaining <= 0):
-                    break
-
-                chunkSize = min(remaining, metaData.p.blockSize)
-                encryptedChunkSize = chunkSize + Constants.BLOCK_OVERHEAD
-                chunk = rawpart[chunkIndex * metaData.p.blockSize: chunkIndex * metaData.p.blockSize + chunkSize]
-                encryptedChunk = AesGcm256.encrypt(chunk, keyBytes)
-
-                if (encryptedChunkSize != len(encryptedChunk)):
-                    breakpoint()
-
-                encryptedBlob += encryptedChunk
-
-            requestBody = dict()
-            requestBody["fileHandle"] = fileId
-            requestBody["partIndex"] = currentIndex + 1
-            requestBody["endIndex"] = lastIndex
-            requestBodyJson = Helper.GetJson(requestBody)
-            payload = self.SignPayloadForm(requestBodyJson, {"chunkData": encryptedBlob})
-            print("POSTing")
-
-            with requests.Session() as s:
-                response = s.post(self._baseUrl + "upload", files=payload)
-
-        except Exception as e:
-            print("Failed upload of part {} out of {}\nError: {}".format(currentIndex + 1, lastIndex, e.args))
-        # don't handle the response here, since when check upload-status is handling broken uploads
-        # print("-- %s seconds ---" % (time.time() - start_time))
 
     def AddFileToFolderMetaData(self, folder, fileOrFolder, isFile=False, isFolder=False):
         metadata = self.getFolderData(folder=folder)
