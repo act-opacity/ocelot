@@ -30,7 +30,7 @@ services:
     mem_limit: 120000000
     memswap_limit: 150000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=primary_queue", "--hostname=primary@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=20", "--loglevel=WARNING", "--queues=primary_queue", "--hostname=primary@%h", "--purge"]
     env_file:
       - ./env.env
     depends_on:
@@ -47,7 +47,7 @@ services:
     mem_limit: 300000000
     memswap_limit: 350000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=download_queue", "--hostname=downloads@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=4", "--loglevel=WARNING", "--queues=download_queue", "--hostname=downloads@%h", "--purge"]
     env_file:
       - ./env.env
     depends_on:
@@ -61,10 +61,23 @@ services:
       dockerfile: dockerfile_celeryworker
     image: ocelot-queue-worker
     restart: always
-    mem_limit: 300000000
-    memswap_limit: 350000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=8", "--loglevel=WARNING", "--queues=upload_queue", "--hostname=uploads@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=6", "--loglevel=WARNING", "--queues=upload_queue", "--hostname=uploads@%h", "--purge"]
+    env_file:
+      - ./env.env
+    depends_on:
+      - rabbitmq
+      - redis
+    volumes:
+      - ~/OpacityDrive:/home/opacity/data/user_volume
+  worker-upload-filepart:
+    build:
+      context: .
+      dockerfile: dockerfile_celeryworker
+    image: ocelot-queue-worker
+    restart: always
+    mem_reservation: 25m    
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=10", "--loglevel=WARNING", "--queues=upload_queue_fileparts", "--hostname=uploads-fileparts@%h", "--purge"]
     env_file:
       - ./env.env
     depends_on:
@@ -81,7 +94,7 @@ services:
     mem_limit: 120000000
     memswap_limit: 150000000
     mem_reservation: 25m
-    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=WARNING", "--queues=metadata_queue", "--hostname=metadata@%h"]
+    command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=WARNING", "--queues=metadata_queue", "--hostname=metadata@%h", "--purge"]
     env_file:
       - ./env.env
     depends_on:
@@ -108,12 +121,10 @@ services:
       - "5672"
   redis:
     image: redis
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-    restart: always
-    mem_limit: 300000000
-    memswap_limit: 450000000
+    command: ["/bin/sh", "/opt/redis/redis_startup.sh"]
     mem_reservation: 25m
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis_startup.sh:/opt/redis/redis_startup.sh
     expose:
       - "6379"
