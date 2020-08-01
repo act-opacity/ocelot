@@ -101,7 +101,7 @@ def file_action_dispatch(**kwargs):
     dispatch = {
         "fa_download_file": "download.download_file",
         "fa_upload_file":   "upload.upload_file",
-        "fa_delete_file":   "metadata.delete_file",
+        "fa_delete_file":   "primary.delete_file",
         "fa_move_file":     "metadata.move_file",
         "fa_rename_file":   "metadata.rename_file"
     }
@@ -125,7 +125,7 @@ def file_action_dispatch(**kwargs):
         if dispatch.get(kwargs["selected_action"]):
             app.signature(dispatch[kwargs["selected_action"]], 
                 kwargs=kwargs).delay()
-            time.sleep(1)
+            time.sleep(0.3)
     return True
 
 @app.task(name="metadata.move_file")
@@ -418,7 +418,7 @@ def add_uploaded_file_to_folder_metadata(**kwargs):
     return True
 
 ''' start delete file action '''
-@app.task(name="metadata.delete_file")
+@app.task(name="primary.delete_file")
 def delete_file(**kwargs):
     # delete remote
     if kwargs["delete_storage"] in ["fa_delete_remote", "fa_delete_remote_and_local"] and kwargs["file_handle"]:
@@ -426,7 +426,7 @@ def delete_file(**kwargs):
         success = delete_file_object(**kwargs)
         # delete file metadata
         if success:
-            delete_file_metadata(**kwargs)
+            app.signature("metadata.delete_file_metadata", kwargs=kwargs).delay()
 
     # delete local
     if kwargs["delete_storage"] in ["fa_delete_local", "fa_delete_remote_and_local"]:
@@ -443,19 +443,19 @@ def delete_file_object(**kwargs):
     # track file to directory mapping for later
     dir_to_file_dict = {}
     # delete file version or all versions depending on delete_version_option selection
+    dir_to_file_dict[file_name] = []
     if kwargs["delete_version"] not in ["fa_delete_all_file_versions"]:
         # delete only the file version specifically requested by user
-        dir_to_file_dict[file_name] = [file_handle]
+        dir_to_file_dict[file_name].append(file_handle)
         print("Don't delete all file versions")
     else:
         print("Delete all file versions")
         # need to locate all versions of file using file_name to match
         metadata = account.getFolderData(folder_path)
         for file in metadata["metadata"].files:
-            dir_to_file_dict[file.name] = []
-        for file in metadata["metadata"].files:
             for version in file.versions:
-                dir_to_file_dict[file.name].append(version.handle)
+                if file.name == file_name:
+                    dir_to_file_dict[file_name].append(version.handle)
         
         print(f'dir_to_file_dict is {dir_to_file_dict}')
 
@@ -485,20 +485,22 @@ def delete_file_object(**kwargs):
                 dir_to_file_dict[file_name].append(fhandle)
     return True
 
+@app.task(name="metadata.delete_file_metadata")
 def delete_file_metadata(**kwargs):
     account = Opacity.Opacity(kwargs["account_handle"])
     metadata = account.getFolderData(kwargs["remote_path"])
+    file_name = kwargs["file_name"]
     file_handle = kwargs["file_handle"]
     files_to_retain = []
     for file in metadata["metadata"].files:
-        versions_to_retain = []
         for version in file.versions:
-            if version.handle != file_handle:
-                if kwargs["delete_version"] != "fa_delete_all_file_versions":
-                    versions_to_retain.append(version)
-        if versions_to_retain:
-            file.versions = versions_to_retain
-            files_to_retain.append(file)
+            if version.handle == file_handle:
+                pass
+            elif file.name == file_name and kwargs["delete_version"] in ["fa_delete_all_file_versions"]:
+                pass
+            else:
+                files_to_retain.append(file)
+    print(files_to_retain)
     metadata["metadata"].files = files_to_retain
     account.setMetadata(metadata)
     return True
