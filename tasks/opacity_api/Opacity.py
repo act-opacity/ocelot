@@ -159,7 +159,7 @@ class Opacity:
         folderMetaData = FolderMetaData.ToObject(metaData)
         return folderMetaData
 
-    def getFolderData(self, folder):
+    def getFolderData(self, folder, recreate_if_nonexistent=True):
         folderKey = Helper.getFolderHDKey(self._masterKey, folder)
         metaDataKey = Helper.getMetaDataKey(folderKey)
         keyString = keccak.new(data=bytearray(folderKey.private_hex, "utf-8"), digest_bits=256).hexdigest()
@@ -169,7 +169,10 @@ class Opacity:
         except TypeError as e:
             print(f"Error: {e}")
             print(f"Folder does not exist; must have been deleted already")
-            folderMetaData = FolderMetaData()
+            if recreate_if_nonexistent:
+                folderMetaData = FolderMetaData()
+            else:
+                return False
         return {"metadata": folderMetaData, "keyString": keyString, "metadataKey": metaDataKey}
 
     def download(self, fileHandle, savingPath, fileName):
@@ -323,79 +326,6 @@ class Opacity:
         metaData = json.loads(metaData)
         folderMetaData = FolderMetaData.ToObject(metaData)
         return folderMetaData
-
-    def delete_file(self, file_handle, folder_path, file_name, delete_version_option):
-        # track file to directory mapping for later
-        dir_to_file_dict = {}
-
-        ''' delete file metadata from folder before deleting file object '''
-        metadata = self.getFolderData(folder_path)
-        files_to_retain = []
-        for file in metadata["metadata"].files:
-            # initialize list for each file key to track versions.
-            # doing it this way since there can be duplicate keys (dup file names).
-            # Opacity currently doesn't track version history, so it has to be
-            # determined based on file name and file path
-            dir_to_file_dict[file.name] = []
-        for file in metadata["metadata"].files:
-            versions_to_retain = []
-            # delete only matching version of file, not all versions of file.
-            # currently only one version exists within file.versions but
-            # could change in the future.
-            for version in file.versions:
-                dir_to_file_dict[file.name].append(version.handle)
-                if version.handle != file_handle:
-                    versions_to_retain.append(version)
-            # if any versions remain, be sure to add file back to metadata
-            # if user has not specifically selected "delete all file versions",
-            # then only delete current version
-            if versions_to_retain:
-                file.versions = versions_to_retain
-                files_to_retain.append(file)
-        # update the folder metadata to reflect file version or all file versions have been deleted
-        metadata["metadata"].files = files_to_retain
-        self.setMetadata(metadata)
-
-        ''' delete file objects '''
-        # delete file version or all versions depending on delete_version_option selection
-        if delete_version_option != "fa_delete_all_file_versions":
-            # delete only the file version specifically requested by user
-            dir_to_file_dict[file_name] = [file_handle]
-        if dir_to_file_dict.get(file_name) and file_handle:
-            for fhandle in dir_to_file_dict.get(file_name):
-                requestBody = {"fileID": fhandle[:64]}
-                rawPayload = Helper.GetJson(requestBody)
-                payload = self.signPayloadDict(rawPayload)
-                payloadJson = Helper.GetJson(payload)
-                with requests.Session() as s:
-                    response = s.post(self._baseUrl + "delete", data=payloadJson)
-                print(f"requesting to delete file object {file_name} with file id of {fhandle}")
-                print(f"response status code: {response.status_code}")
-                if response.status_code == 200 or response.content.decode() == '"record not found"':
-                    print(f"Successfully deleted file: {os.path.join(folder_path, file_name)}")
-                elif response.status_code == 400:
-                    print("**********************************")
-                    print("Error:\n{}".format(response.content.decode()))
-                    print("Delete of object failed. Maybe incorrect file ID? Not retrying.")
-                    print("**********************************")                    
-                else:
-                    print("**********************************")
-                    print("Error:\n{}".format(response.content.decode()))
-                    print("Delete of object failed. Retrying.")
-                    print("**********************************")
-                    # add back to list to retry
-                    dir_to_file_dict[file_name].append(fhandle)
-
-    def deleteMetaData(self, handle):
-        requestBody = dict()
-        requestBody["timestamp"] = Helper.GetUnixMilliseconds()
-        requestBody["metadataKey"] = handle
-        rawPayload = Helper.GetJson(requestBody)
-        payload = self.signPayloadDict(rawPayload)
-        payloadJson = Helper.GetJson(payload)
-
-        with requests.Session() as s:
-            return s.post(self._baseUrl + "metadata/delete", data=payloadJson)
 
     def createMetadata(self, folder):
         dictionary = self.createMetadatakeyAndKeystring(folder=folder)

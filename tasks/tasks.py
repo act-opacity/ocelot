@@ -525,7 +525,7 @@ def folder_action_dispatch(**kwargs):
                 kwargs={"account_handle": kwargs["account_handle"], "remote_path": dir}).delay().get()
 
     dispatch = {
-        'da_delete_folder': "metadata.delete_folder",
+        'da_delete_folder': "primary.delete_folder",
         'da_move_folder':   "metadata.move_folder",
         'da_rename_folder': "metadata.rename_folder"
     }
@@ -537,52 +537,75 @@ def folder_action_dispatch(**kwargs):
     return True
 
 ''' start delete folder action '''
-@app.task(name="metadata.delete_folder")
+@app.task(name="primary.delete_folder")
 def delete_folder(**kwargs):
+    print("Running delete_folder()")
+    if not 'delete_file_objects_bool' in kwargs:
+        kwargs["delete_file_objects_bool"] = True
     # delete remote
     folder_to_delete_path = kwargs["delete_folder"]
+    running_tasks = []
     if kwargs["delete_storage"] in ["da_delete_remote", "da_delete_remote_and_local"]:
         folder_metadata = get_all_files_and_subdirs_of_dir(account_handle=kwargs["account_handle"], dir_path=folder_to_delete_path)
-        # reverse sort to delete contents of lowest subdirectory first and move up the chain
-        for folder, folder_data in sorted(list(folder_metadata.items()), key=lambda x:x[0], reverse=True):
-            for file in folder_data['files']:
-                # delete each file one by one. delete file object. wait to complete. then delete file metadata
-                _kwargs={'file_handle': file[1], 'delete_storage': 'fa_delete_remote', 'account_handle': kwargs['account_handle'],
-                            'delete_version': '', 'remote_path': folder, 'file_name': file[0] }
-                delete_file(**_kwargs)
+        print(f"Folder Metadata is: {folder_metadata}")
+        # don't delete file objects if being called from move_folder()
+        if kwargs["delete_file_objects_bool"]:
+            # reverse sort to delete contents of lowest subdirectory first and move up the chain
+            # no need to specify "delete version" because deleting all files from folder
+            for folder, folder_data in sorted(list(folder_metadata.items()), key=lambda x:x[0], reverse=True):
+                for file in folder_data['files']:
+                    # delete each file
+                    kwargs1={'file_handle': file[1], 'delete_storage': 'fa_delete_remote', 'account_handle': kwargs['account_handle'],
+                                'delete_version': '', 'remote_path': folder, 'file_name': file[0] }
+                    task_lookup = app.signature("primary.delete_file", kwargs=kwargs1).delay()
+                    running_tasks.append(task_lookup)
+            # ensure delete_file() tasks have been completed before deleting folders
+            while running_tasks:
+                task_lookup = running_tasks.pop()
+                if not task_lookup.ready():
+                    running_tasks.insert(0, task_lookup)
+                    time.sleep(0.3)
+        print("Checked to ensure all files have been deleted. Confirmed.")
         # delete folder metadata
         for folder, folder_data in sorted(list(folder_metadata.items()), key=lambda x:x[0], reverse=True):
             # delete folder metadata once all file objects deleted
-            delete_directory_metadata(account_handle=kwargs['account_handle'], folder_handle=folder_data['folder_handle'])
+            kwargs2={'account_handle': kwargs['account_handle'], 'folder_handle': folder_data['folder_handle']}
+            app.signature("metadata.delete_directory_metadata", kwargs=kwargs2).delay().get()
         # delete folder from parent folder metadata
         # remote_path is parent directory of directory to delete
-        _kwargs={'account_handle': kwargs['account_handle'], 'folder_name': Path(folder_to_delete_path).name, 
+        kwargs3={'account_handle': kwargs['account_handle'], 'folder_name': Path(folder_to_delete_path).name, 
             'parent_path': Path(folder_to_delete_path).parent.as_posix()}
-        delete_subdir_metadata(**_kwargs)
+        app.signature("metadata.delete_subdir_metadata", kwargs=kwargs3).delay().get()    
 
     # delete local
     if kwargs["delete_storage"] in ["da_delete_local", "da_delete_remote_and_local"]:
-        try:
-            shutil.rmtree(get_local_path(kwargs['account_handle'], folder_to_delete_path))
-        except OSError as e:
-            print (f"Error: {e.filename} - {e.strerror}")
-            print('Local folder does not exist or could not be removed')
+        if kwargs["delete_file_objects_bool"]:
+            try:
+                shutil.rmtree(get_local_path(kwargs['account_handle'], folder_to_delete_path))
+            except OSError as e:
+                print (f"Error: {e.filename} - {e.strerror}")
+                print('Local folder does not exist or could not be removed')
 
+@app.task(name="metadata.delete_directory_metadata")
 def delete_directory_metadata(**kwargs):
+    print("Running delete_directory_metadata()")
     account = Opacity.Opacity(kwargs["account_handle"])
     requestBody = {"timestamp": Helper.GetUnixMilliseconds(), "metadataKey": kwargs["folder_handle"]}
     rawPayload = Helper.GetJson(requestBody)
     payload = account.signPayloadDict(rawPayload)
     payloadJson = Helper.GetJson(payload)
     with requests.Session() as s:
-        return s.post(f"{account._baseUrl}metadata/delete", data=payloadJson)
+        s.post(f"{account._baseUrl}metadata/delete", data=payloadJson)
+    return True
 
+@app.task(name="metadata.delete_subdir_metadata")
 def delete_subdir_metadata(**kwargs):
     # remove subfolder from folder, similar to removing a file from folder
     account = Opacity.Opacity(kwargs["account_handle"])
     metadata = account.getFolderData(kwargs["parent_path"]) # parent dir of subdir
     folders_to_retain = []
     delete_dir_metadata = []
+    print("Running last step in delete_folder() which is delete_subdir_metadata()")
     for folder in metadata["metadata"].folders:
         print(f"folder.name: {folder.name}")
         print(f'kwargs[folder_name]: {kwargs["folder_name"]}')
@@ -605,17 +628,21 @@ def get_all_files_and_subdirs_of_dir(**kwargs):
     Example
     directory_metadata = {'/dir1/sub1': 'folder_handle': '123456', 'files': [['file1','356496'],['file2','964731']]}
     '''
+    print("Running get_all_files_and_subdirs_of_dir()")
     while directories_to_index:
         current_dir = directories_to_index.pop()
-        folder_handle = account.getFolderData(current_dir)['metadataKey']
-        metadata = account._metaData
-        directory_metadata[current_dir] = {'folder_handle': folder_handle, 'files': []}
-        for folder in metadata.folders:
-            absolute_path = os.path.join(current_dir, folder.name)
-            directories_to_index.append(absolute_path)
-        for file in metadata.files:
-            for version in file.versions:
-                directory_metadata[current_dir]['files'].append([file.name, version.handle])
+        metadata = account.getFolderData(current_dir, False)
+        if metadata:
+            folder_handle = metadata['metadataKey']
+            print(f"folder_handle is: {folder_handle}")
+            metadata = account._metaData
+            directory_metadata[current_dir] = {'folder_handle': folder_handle, 'files': []}
+            for folder in metadata.folders:
+                absolute_path = os.path.join(current_dir, folder.name)
+                directories_to_index.append(absolute_path)
+            for file in metadata.files:
+                for version in file.versions:
+                    directory_metadata[current_dir]['files'].append([file.name, version.handle])
     return directory_metadata
 ''' end delete folder action '''
 
@@ -629,9 +656,7 @@ def move_folder(**kwargs):
 
     # Step 1: iterate directory to move. create new folder and metadata for main dir and subdirs.
     directories_to_index = [[folder_movefrom_path, folder_moveto_path]] # initialize
-    i = 1
     while directories_to_index:
-        print(f"directories to index (iteration {i}): {directories_to_index}")
         move_folder = directories_to_index.pop()
         folder = Path(move_folder[0]).name
         old_directory = move_folder[0]
@@ -643,32 +668,23 @@ def move_folder(**kwargs):
         create_directory_local_and_remote_combined(account_handle=account_handle, remote_path=new_directory)
         # copy metadata to new directory; retain any existing files if directory already
         newdir_metadata = account.getFolderData(new_directory)
-        newdir_metadata["metadata"].files = newdir_metadata["metadata"].files + metadata["metadata"].files
+        newdir_metadata["metadata"].files = list(set(newdir_metadata["metadata"].files + metadata["metadata"].files))
         # transfer metadata to new location
         account.setMetadata(newdir_metadata)
-        # delete metadata of old folder
-        folder_handle = metadata['metadataKey']
-        delete_directory_metadata(account_handle=account_handle, folder_handle=folder_handle)
-        i = i + 1
-
-    # Step 2: remove folder metadata from parent folder
-    movefrom_metadata_parent = account.getFolderData(Path(folder_movefrom_path).parent.as_posix()) # move from this dir
-    folders_to_retain = []
-    for folder in movefrom_metadata_parent["metadata"].folders:
-        if folder.name == folder_name:
-            pass
-        else:
-            folders_to_retain.append(folder)
-    movefrom_metadata_parent["metadata"].folders = folders_to_retain
-    account.setMetadata(movefrom_metadata_parent)
+        # delete folder metadata of movefrom folder
+        kwargs1 = {"account_handle": account_handle, "delete_storage": "da_delete_remote", 
+                    "delete_folder": folder_movefrom_path, "delete_file_objects_bool": False}
+        app.signature("primary.delete_folder", kwargs=kwargs1).delay()
 
     # Step 3: move local directory
     try:
         old_path = get_local_path(kwargs["account_handle"], folder_movefrom_path)
         new_path = get_local_path(kwargs["account_handle"], folder_moveto_path)
         if os.path.isdir(os.path.join(new_path, Path(old_path).name)):
+            print("Removing destination dir before copying to it: {os.path.join(new_path, Path(old_path).name)}")
             shutil.rmtree(os.path.join(new_path, Path(old_path).name))
-        shutil.move(old_path, new_path)
+        # ensure trailing slash on dirs when using move command
+        shutil.move(os.path.join(old_path, ""), os.path.join(new_path, ""))
     except Exception as e:
         print(e.__doc__)
     return True
