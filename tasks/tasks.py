@@ -579,7 +579,7 @@ def delete_folder(**kwargs):
 
     # delete local
     if kwargs["delete_storage"] in ["da_delete_local", "da_delete_remote_and_local"]:
-        if delete_file_objects_bool:
+        if kwargs["delete_file_objects_bool"]:
             try:
                 shutil.rmtree(get_local_path(kwargs['account_handle'], folder_to_delete_path))
             except OSError as e:
