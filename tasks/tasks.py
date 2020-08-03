@@ -46,7 +46,7 @@ def update_db_with_new_account_metadata(account_handle_db_id=""):
             record.expiration_date         = f"{e.month}/{e.day}/{e.year}"
             record.months_in_subscription  = account_status.account.monthsInSubscription
             record.storage_capacity        = account_status.account.storageLimit
-            record.storage_used            = f"{account_status.account.storageUsed:.7f}"
+            record.storage_used            = f"{account_status.account.storageUsed:.3f}"
 
             session.commit()
             return True
@@ -77,7 +77,7 @@ def add_account_details_to_db(account_handle="", handle_name=""):
                 expiration_date=f"{e.month}/{e.day}/{e.year}",
                 months_in_subscription=account_status.account.monthsInSubscription,
                 storage_capacity=account_status.account.storageLimit, 
-                storage_used=f"{account_status.account.storageUsed:.7f}"
+                storage_used=f"{account_status.account.storageUsed:.3f}"
                 )
 
         print(f"New record to add to db: {add_account}")
