@@ -17,7 +17,7 @@
     <!-- BEGIN--primary body wrapper -->  
     <div class="container-fluid">
         <!-- BEGIN--main menu -->
-        <div class="row mb-3">
+        <div class="row mb-1">
             <div class="col-md-12">
                 <ul class="nav nav-tabs">
                     <li class="nav-item">
@@ -667,6 +667,11 @@
             </div>
         </div>
         <!-- END--main menu -->
+        <div class="row mb-1">
+            <div class="col-md-12">
+                <div id="loadedAccountDetails" class="d-block p-2 bg-primary text-white"></div>
+            </div>
+        </div>
         <!-- BEGIN--modal for remove account confirmation -->
         <div class="view">
             <div class="modal fade" id="removeAccountConfirmModal" tabindex="-1" role="dialog" aria-labelledby="removeConfirmationLabel" aria-hidden="true">
@@ -947,7 +952,7 @@
         var file_lookup_version_history = {};   // required by file version modal
         var file_selected_version_history = ""; // required by file version modal
         var loaded_account_db_id = 0;           // track which account is loaded
-        var saved_accounts;                     // lookup for all account data
+        var saved_accounts = {};                // lookup for all account data
 
         // BEGIN onload events
         window.addEventListener('load', function() {
@@ -1113,7 +1118,6 @@
         function c_loadAccountsToSelect(refresh=false){
             // Load saved accounts for select box
             if (refresh) {c_addSpinner()}
-            saved_accounts = {}
             
             $.ajax({
                 type:"post",
@@ -1125,6 +1129,10 @@
                 cache:false,
                 success: function (response)
                 {
+                    // reset saved_accounts
+                    for (const prop of Object.getOwnPropertyNames(saved_accounts)) {
+                      delete saved_accounts[prop];
+                    }
                     document.querySelectorAll('#loadAccount, #removeAccount').forEach(element => {
                         // remove existing options each time
                         while (element.firstChild) {
@@ -1168,6 +1176,7 @@
                             i+=1
                         })
                     })
+                    c_displayLoadedAccountDetails(loaded_account_db_id)
                     c_removeSpinner()
                     if(refresh) {alert("Account metadata refreshed to show current account status details");}
 
@@ -1472,6 +1481,7 @@
                     {
                         if(refresh_bool) alert(data["msg"])
                         c_getRefreshProgress(handle_id);
+                        c_displayLoadedAccountDetails(loaded_account_db_id);
                     },
                     error: function(XMLHttpRequest, textStatus, errorThrown) {
                         c_removeSpinner()
@@ -1614,6 +1624,15 @@
                 return false;
             }
         })
+        
+        function c_displayLoadedAccountDetails(handle_id) {
+            if (handle_id in saved_accounts) {
+                val = saved_accounts[handle_id]
+                $("#loadedAccountDetails").text(`Loaded Account: ${val[0]} | ${val[1]} | Expires on ${val[2]} | Using ${val[4]} GB of ${val[3]} GB`)            
+            } else {
+                $("#loadedAccountDetails").text("No Account Currently loaded")
+            }
+        }
 
         // END other functions
     </script>
