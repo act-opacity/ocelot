@@ -1,9 +1,11 @@
 import os, sys, json, shutil, time, datetime, base64, math
 import sqlalchemy, requests, mimetypes, itertools
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base
 from pathlib import Path, PurePath
 from celery import Celery, signature
 from celery.utils.log import get_task_logger
-from sqlalchemy import create_engine
 from tasks.opacity_api import *
 from tasks.opacity_api.Constants import Constants
 from tasks.opacity_api.AesGcm256 import AesGcm256
@@ -22,8 +24,38 @@ app.config_from_object('tasks.celeryconfig')
 
 logger = get_task_logger(__name__)
 
-@app.task(name="primary.get_account_details")
-def get_account_details(account_handle="", handle_name=""):
+@app.task(name="primary.update_db_with_new_account_metadata")
+def update_db_with_new_account_metadata(account_handle_db_id=""):
+    if account_handle_db_id:
+        try:
+            metadata = sqlalchemy.MetaData()
+            metadata.reflect(bind=engine)
+            Base = automap_base(metadata=metadata)
+            Base.prepare(engine, reflect=True)
+            Account = Base.classes.account
+            Session = sessionmaker(bind = engine)
+            session = Session()
+            
+            record = session.query(Account).get(account_handle_db_id)
+            account = Opacity.Opacity(record.handle)
+            account_status = account.checkAccountStatus()
+            c = datetime.datetime.strptime(account_status.account.createdAt, '%Y-%m-%dT%H:%M:%SZ')
+            e = datetime.datetime.strptime(account_status.account.expirationDate, '%Y-%m-%dT%H:%M:%SZ')
+            
+            record.creation_date           = f"{c.month}/{c.day}/{c.year}"
+            record.expiration_date         = f"{e.month}/{e.day}/{e.year}"
+            record.months_in_subscription  = account_status.account.monthsInSubscription
+            record.storage_capacity        = account_status.account.storageLimit
+            record.storage_used            = f"{account_status.account.storageUsed:.3f}"
+
+            session.commit()
+            return True
+        except:
+            print (f"Unexpected error: {sys.exc_info()[0]}")
+            return False
+
+@app.task(name="primary.add_account_details_to_db")
+def add_account_details_to_db(account_handle="", handle_name=""):
     try:
         # retrieve from Opacity
         account = Opacity.Opacity(account_handle)
@@ -32,8 +64,6 @@ def get_account_details(account_handle="", handle_name=""):
         c = datetime.datetime.strptime(account_status.account.createdAt, '%Y-%m-%dT%H:%M:%SZ')
         e = datetime.datetime.strptime(account_status.account.expirationDate, '%Y-%m-%dT%H:%M:%SZ')
 
-        from sqlalchemy.orm import sessionmaker
-        from sqlalchemy.ext.automap import automap_base
         metadata = sqlalchemy.MetaData()
         metadata.reflect(bind=engine)
         Base = automap_base(metadata=metadata)
@@ -47,7 +77,7 @@ def get_account_details(account_handle="", handle_name=""):
                 expiration_date=f"{e.month}/{e.day}/{e.year}",
                 months_in_subscription=account_status.account.monthsInSubscription,
                 storage_capacity=account_status.account.storageLimit, 
-                storage_used=f"{account_status.account.storageUsed:.7f}"
+                storage_used=f"{account_status.account.storageUsed:.3f}"
                 )
 
         print(f"New record to add to db: {add_account}")
