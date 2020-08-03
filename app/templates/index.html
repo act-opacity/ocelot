@@ -36,7 +36,7 @@
                                                 <h5 class="modal-title spinner" id="loadAccountLabel">Add New or Load Saved Account</h5>
                                             </div>
                                             <div class="col-md-4 mt-2 mb-2">
-                                                <button class="btn btn-sm btn-primary my-1 mx-1" onclick="return c_loadAccountsToSelect(true);">Refresh Account Metadata</button>
+                                                <button class="btn btn-sm btn-primary my-1 mx-1 spinner" onclick="return c_loadAccountsToSelect(true);">Refresh Account Metadata</button>
                                                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
                                             </div>
                                     </div>
@@ -1112,54 +1112,73 @@
         // BEGIN other functions
         function c_loadAccountsToSelect(refresh=false){
             // Load saved accounts for select box
+            if (refresh) {c_addSpinner()}
             saved_accounts = {}
-            $.post("/account/get-all", {'refresh': refresh})
-            .done(function(response) {
-                document.querySelectorAll('#loadAccount, #removeAccount').forEach(element => {
-                    // remove existing options each time
-                    while (element.firstChild) {
-                        element.removeChild(element.lastChild);
-                    }
-                    // create empty select and make "selected"
-                    var option = document.createElement("option");
-                    option.selected="selected";
-                    element.add(option);
-                    // update with new options received from server
-                    response.forEach(val => {
-                        // update global var with account data
-                        saved_accounts[val.id] = [val.handle_name, val.handle, val.expiration_date, 
-                                                  val.storage_capacity, val.storage_used, val.months_in_subscription]
+            
+            $.ajax({
+                type:"post",
+                url:"/account/get-all",
+                data: 
+                {  
+                    'refresh': refresh
+                },
+                cache:false,
+                success: function (response)
+                {
+                    document.querySelectorAll('#loadAccount, #removeAccount').forEach(element => {
+                        // remove existing options each time
+                        while (element.firstChild) {
+                            element.removeChild(element.lastChild);
+                        }
+                        // create empty select and make "selected"
                         var option = document.createElement("option");
-                        option.text = `Name: ${val.handle_name} | Size: ${val.storage_capacity}GB | Expires: ${val.expiration_date} | Short Handle: ${val.handle}`;
-                        option.id = val.id;
+                        option.selected="selected";
                         element.add(option);
+                        // update with new options received from server
+                        response.forEach(val => {
+                            // update global var with account data
+                            saved_accounts[val.id] = [val.handle_name, val.handle, val.expiration_date, 
+                                                      val.storage_capacity, val.storage_used, val.months_in_subscription]
+                            var option = document.createElement("option");
+                            option.text = `Name: ${val.handle_name} | Size: ${val.storage_capacity}GB | Expires: ${val.expiration_date} | Short Handle: ${val.handle}`;
+                            option.id = val.id;
+                            element.add(option);
+                        })
                     })
-                })
 
-                document.querySelectorAll('#accountPathDetail').forEach(element => {
-                    // remove existing options each time
-                    while (element.firstChild) {
-                        element.removeChild(element.lastChild);
-                    }
-                    // add data back
-                    let i = 0
-                    let home = $('#opacityFileExplorerPath').text()
-                    response.forEach(val => {
-                        let path = (home[0] == '/' ? `${home}/${val.handle}` : `${home}\\${val.handle}`)
-                        let html = `<div class="form-group row">
-                                        <div class="col-md-2 mt-2 mb-2">
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="return c_setClipboard('#accountPath${i}');">Copy Path</button>
-                                        </div>
-                                        <div class="col-md-10 mt-2 mb-2">
-                                            <p><b>${val.handle_name}:</b> <span id="accountPath${i}">${path}</span></p>
-                                        </div>
-                                    </div>`
-                        $('#accountPathDetail').append(html)
-                        i+=1
+                    document.querySelectorAll('#accountPathDetail').forEach(element => {
+                        // remove existing options each time
+                        while (element.firstChild) {
+                            element.removeChild(element.lastChild);
+                        }
+                        // add data back
+                        let i = 0
+                        let home = $('#opacityFileExplorerPath').text()
+                        response.forEach(val => {
+                            let path = (home[0] == '/' ? `${home}/${val.handle}` : `${home}\\${val.handle}`)
+                            let html = `<div class="form-group row">
+                                            <div class="col-md-2 mt-2 mb-2">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="return c_setClipboard('#accountPath${i}');">Copy Path</button>
+                                            </div>
+                                            <div class="col-md-10 mt-2 mb-2">
+                                                <p><b>${val.handle_name}:</b> <span id="accountPath${i}">${path}</span></p>
+                                            </div>
+                                        </div>`
+                            $('#accountPathDetail').append(html)
+                            i+=1
+                        })
                     })
-                })
-                if(refresh) {alert("Account metadata refreshed to show current account status details");}
-            })
+                    c_removeSpinner()
+                    if(refresh) {alert("Account metadata refreshed to show current account status details");}
+
+                },
+                error: function(XMLHttpRequest, textStatus, errorThrown) {
+                    c_removeSpinner()
+                    alert(`Error loading: ${textStatus}. Did you just restart the app? Probably workers aren't ready yet. Try again in a few seconds.`);
+                },
+                timeout: 10000
+            });
+            return false;
         }
 
         function c_addNewAccount(){
