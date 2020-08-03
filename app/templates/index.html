@@ -32,8 +32,13 @@
                             <div class="modal-dialog modal-lg" role="document">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title spinner" id="loadAccountLabel">Add New or Load Saved Account</h5>
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            <div class="col-md-8 mt-2 mb-2">
+                                                <h5 class="modal-title spinner" id="loadAccountLabel">Add New or Load Saved Account</h5>
+                                            </div>
+                                            <div class="col-md-4 mt-2 mb-2">
+                                                <button class="btn btn-sm btn-primary my-1 mx-1" onclick="return c_loadAccountsToSelect(true);">Refresh Account Metadata</button>
+                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">×</span></button>
+                                            </div>
                                     </div>
                                     <div class="modal-body mx-4">
                                         <form id="addNewAccount">
@@ -942,6 +947,7 @@
         var file_lookup_version_history = {};   // required by file version modal
         var file_selected_version_history = ""; // required by file version modal
         var loaded_account_db_id = 0;           // track which account is loaded
+        var saved_accounts;                     // lookup for all account data
 
         // BEGIN onload events
         window.addEventListener('load', function() {
@@ -1104,9 +1110,10 @@
         // END onload events
 
         // BEGIN other functions
-        function c_loadAccountsToSelect(){
+        function c_loadAccountsToSelect(refresh=false){
             // Load saved accounts for select box
-            $.post("/account/get-all")
+            saved_accounts = {}
+            $.post("/account/get-all", {'refresh': refresh})
             .done(function(response) {
                 document.querySelectorAll('#loadAccount, #removeAccount').forEach(element => {
                     // remove existing options each time
@@ -1119,8 +1126,11 @@
                     element.add(option);
                     // update with new options received from server
                     response.forEach(val => {
+                        // update global var with account data
+                        saved_accounts[val.id] = [val.handle_name, val.handle, val.expiration_date, 
+                                                  val.storage_capacity, val.storage_used, val.months_in_subscription]
                         var option = document.createElement("option");
-                        option.text = `Name: ${val.handle_name} | Total Size: ${val.storage_capacity}GB | Expire Date: ${val.expiration_date} | Handle Starts With: ${val.handle}`;
+                        option.text = `Name: ${val.handle_name} | Size: ${val.storage_capacity}GB | Expires: ${val.expiration_date} | Short Handle: ${val.handle}`;
                         option.id = val.id;
                         element.add(option);
                     })
@@ -1148,6 +1158,7 @@
                         i+=1
                     })
                 })
+                if(refresh) {alert("Account metadata refreshed to show current account status details");}
             })
         }
 
@@ -1364,9 +1375,8 @@
                 dataType: 'json',
                 cache: false,
                 success: function (data) {
-                    var current_loaded_handle_id = document.querySelector('#loadAccount option:checked').id;
                     if (data["status"] == "success") {
-                        if(current_loaded_handle_id == handle_id) {
+                        if(loaded_account_db_id == handle_id) {
                             // first clear any existing data and applied filters
                             c_clearFilters()
                             act.dataTable.clear().draw()
