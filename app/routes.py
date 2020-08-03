@@ -30,24 +30,35 @@ def index():
 
 @app.route('/account/get-all', methods=['POST'])
 def load_accounts():
-    try:
+    refresh_bool = convert_js_bool_to_python(request.form.get('refresh'))
+    print(f"Refresh account data first? {refresh_bool}")
+    if refresh_bool:
         accounts = Account.query.all()
-        build_result = []
         for account in accounts:
-            build_result.append(object_as_dict(account, db))
-        for account in build_result:
-            account['handle'] = get_short_handle(account["handle"])
-    except:
-        print (f"Unexpected error: {sys.exc_info()[0]}")
-        return "failed"
+            id = account.id
+            celery.signature("primary.update_db_with_new_account_metadata", kwargs={"account_handle_db_id": id}).delay().get()
+    accounts = Account.query.all()
+    build_result = []
+    for account in accounts:
+        build_result.append(object_as_dict(account, db))
+    for account in build_result:
+        account['handle'] = get_short_handle(account["handle"])
 
     return jsonify(build_result)
+
+@app.route('/account/refresh-account-metadata', methods=['POST'])
+def refresh_account_metadata():
+    accounts = Account.query.all()
+    for account in accounts:
+        id = account.id
+        celery.signature("primary.update_db_with_new_account_metadata", kwargs={"account_handle_db_id": id}).delay().get()
+    return "Account metadata updated successfully"
 
 @app.route('/account/add-new', methods=['POST'])
 def new_account():
     handle_name = request.form.get('handle_name')
     handle = request.form.get('handle')
-    task_result = celery.signature("primary.get_account_details", 
+    task_result = celery.signature("primary.add_account_details_to_db", 
         kwargs={'account_handle': handle, 'handle_name': handle_name}).delay().get()
 
     if task_result:
