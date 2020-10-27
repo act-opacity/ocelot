@@ -6,7 +6,7 @@ certifi==2019.11.28
 cffi==1.14.0
 chardet==3.0.4
 colorama==0.4.3
-cryptography==2.9
+cryptography==3.2
 cytoolz==0.10.1
 docutils==0.16
 eth-abi==2.1.1
