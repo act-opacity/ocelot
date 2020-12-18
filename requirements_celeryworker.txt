@@ -1,2 +1,2 @@
-celery[redis,gevent]
+celery[redis,gevent]==4.4.7
 sqlalchemy
