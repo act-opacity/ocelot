@@ -6,8 +6,8 @@ services:
       dockerfile: dockerfile_webapp
     image: ocelot
     restart: always
-    mem_limit: 200000000
-    memswap_limit: 300000000
+    mem_limit: "200000000"
+    memswap_limit: "300000000"
     mem_reservation: 50m
     command: [/bin/bash, start_webapp_https.sh]
     env_file:
@@ -27,8 +27,8 @@ services:
       dockerfile: dockerfile_celeryworker
     image: ocelot-queue-worker
     restart: always
-    mem_limit: 120000000
-    memswap_limit: 150000000
+    mem_limit: "120000000"
+    memswap_limit: "150000000"
     mem_reservation: 25m
     command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=20", "--loglevel=WARNING", "--queues=primary_queue", "--hostname=primary@%h", "--purge"]
     env_file:
@@ -44,8 +44,8 @@ services:
       dockerfile: dockerfile_celeryworker
     image: ocelot-queue-worker
     restart: always
-    mem_limit: 300000000
-    memswap_limit: 350000000
+    mem_limit: "300000000"
+    memswap_limit: "350000000"
     mem_reservation: 25m
     command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=4", "--loglevel=WARNING", "--queues=download_queue", "--hostname=downloads@%h", "--purge"]
     env_file:
@@ -91,8 +91,8 @@ services:
       dockerfile: dockerfile_celeryworker
     image: ocelot-queue-worker
     restart: always
-    mem_limit: 120000000
-    memswap_limit: 150000000
+    mem_limit: "120000000"
+    memswap_limit: "150000000"
     mem_reservation: 25m
     command: ["venv/bin/celery", "worker", "--app=tasks.tasks", "--pool=gevent", "--concurrency=1", "--loglevel=WARNING", "--queues=metadata_queue", "--hostname=metadata@%h", "--purge"]
     env_file:
@@ -103,10 +103,10 @@ services:
     volumes:
       - ~/OpacityDrive:/home/opacity/data/user_volume
   flower:
-    image: mher/flower
+    image: mher/flower:0.9.5
     restart: always
-    mem_limit: 120000000
-    memswap_limit: 150000000
+    mem_limit: "120000000"
+    memswap_limit: "150000000"
     mem_reservation: 25m
     env_file:
       - ./env.env
