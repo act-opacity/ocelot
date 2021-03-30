@@ -33,7 +33,7 @@ protobuf==3.11.3
 pyaes==1.6.1
 pycparser==2.20
 pycryptodome==3.9.7
-Pygments==2.6.1
+Pygments==2.7.4
 pyrsistent==0.16.0
 requests==2.23.0
 rlp==1.2.0
