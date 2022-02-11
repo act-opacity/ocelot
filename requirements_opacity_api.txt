@@ -29,7 +29,7 @@ lru-dict==1.1.6
 multiaddr==0.0.9
 netaddr==0.7.19
 parsimonious==0.8.1
-protobuf==3.11.3
+protobuf==3.15.0
 pyaes==1.6.1
 pycparser==2.20
 pycryptodome==3.9.7
